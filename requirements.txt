@@ -1,0 +1,6 @@
+python-dotenv
+Flask
+pytest
+pytest-cov
+coverage
+mysql-connector-python
