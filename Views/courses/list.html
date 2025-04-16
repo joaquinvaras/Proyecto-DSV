@@ -11,7 +11,7 @@
             <th>ID</th>
             <th>Name</th>
             <th>NRC</th>
-            <th>Prerequisites</th> 
+            <th>Prerequisites</th>
             <th>Actions</th>
         </tr>
     </thead>
@@ -37,6 +37,7 @@
                 <form action="/courses/delete/{{ course.id }}" method="post" style="display:inline;">
                     <button type="submit" class="btn btn-danger btn-sm">Delete</button>
                 </form>
+                <a href="/courses/{{ course.id }}/sections" class="btn btn-info btn-sm">Sections</a>
             </td>
         </tr>
         {% endfor %}

@@ -23,6 +23,31 @@ class CourseService:
         """
         cursor.execute(query, (course_id,))
         return cursor.fetchall()
+    
+    
+    def get_enrollments_in_section(self, section_id):
+        cursor = self.db.connect()
+        query = """
+            SELECT u.id AS user_id, u.name AS user_name, u.email AS user_email
+            FROM Users u
+            JOIN Courses_Taken ct ON u.id = ct.user_id
+            WHERE ct.section_id = %s
+        """
+        cursor.execute(query, (section_id,))
+        return cursor.fetchall()
+    
+    def unenroll_student_from_section(self, course_id, section_id, user_id):
+
+        cursor = self.db.connect()
+        
+
+        cursor.execute(
+            "DELETE FROM Courses_Taken WHERE course_id = %s AND section_id = %s AND user_id = %s",
+            (course_id, section_id, user_id)
+        )
+        
+
+        self.db.commit()
 
     def create(self, name, nrc, prerequisites=None):
         if prerequisites is None:

@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}Students in Section for {{ course.name }} (NRC: {{ course.nrc }}){% endblock %}
+
+{% block content %}
+<h2>Students Enrolled in Section {{ section.number }} ({{ section.period }})</h2>
+
+<a href="{{ url_for('list_sections', course_id=course.id) }}" class="btn btn-secondary mb-3">Back to Sections</a>
+
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>Student Name</th>
+            <th>Email</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for enrollment in enrollments %}
+        <tr>
+            <td>{{ enrollment.user_name }}</td>
+            <td>{{ enrollment.user_email }}</td>
+            <td>
+                <form action="{{ url_for('unenroll_student_from_section', course_id=course.id, section_id=section.id, user_id=enrollment.user_id) }}" method="post" style="display:inline;">
+                    <button type="submit" class="btn btn-danger btn-sm">Unenroll</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% endblock %}

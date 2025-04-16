@@ -4,30 +4,39 @@ class CourseTakenService:
     def __init__(self):
         self.db = DatabaseConnection()
 
-    def get_all(self):
-        cursor = self.db.connect()
-        cursor.execute("SELECT * FROM Course_Taken")
-        return cursor.fetchall()
-
-    def get_by_id(self, course_taken_id):
-        cursor = self.db.connect()
-        cursor.execute("SELECT * FROM Course_Taken WHERE Id = %s", (course_taken_id,))
-        return cursor.fetchone()
-
-    def get_by_user(self, user_id):
-        cursor = self.db.connect()
-        cursor.execute("SELECT * FROM Course_Taken WHERE User_id = %s", (user_id,))
-        return cursor.fetchall()
-
-    def create(self, user_id, section_id):
+    def enroll_student(self, user_id, course_id, section_id):
         cursor = self.db.connect()
         cursor.execute(
-            "INSERT INTO Course_Taken (User_id, Section_id) VALUES (%s, %s)",
-            (user_id, section_id)
+            "INSERT INTO Courses_Taken (user_id, course_id, section_id, final_grade) VALUES (%s, %s, %s, %s)",
+            (user_id, course_id, section_id, 1)  
+        )
+        self.db.commit()
+    
+    def unenroll_student(self, course_id, section_id, user_id):
+        cursor = self.db.connect()
+        cursor.execute(
+            "DELETE FROM Courses_Taken WHERE course_id = %s AND section_id = %s AND user_id = %s",
+            (course_id, section_id, user_id)
         )
         self.db.commit()
 
-    def delete(self, course_taken_id):
+    def get_students_by_section(self, section_id):
         cursor = self.db.connect()
-        cursor.execute("DELETE FROM Course_Taken WHERE Id = %s", (course_taken_id,))
-        self.db.commit()
+        cursor.execute(
+            "SELECT u.name, u.email, ct.final_grade FROM Courses_Taken ct "
+            "JOIN Users u ON ct.user_id = u.id "
+            "WHERE ct.section_id = %s",
+            (section_id,)
+        )
+        return cursor.fetchall()
+
+    def get_courses_taken_by_user(self, user_id):
+        cursor = self.db.connect()
+        cursor.execute(
+            "SELECT c.name, s.period, ct.final_grade FROM Courses_Taken ct "
+            "JOIN Courses c ON ct.course_id = c.id "
+            "JOIN Sections s ON ct.section_id = s.id "
+            "WHERE ct.user_id = %s",
+            (user_id,)
+        )
+        return cursor.fetchall()

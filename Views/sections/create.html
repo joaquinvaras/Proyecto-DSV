@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}Create Section{% endblock %}
+
+{% block content %}
+<h2>Create Section for {{ course.name }} (NRC: {{ course.nrc }})</h2>
+
+<form method="post">
+    <div class="form-group">
+        <label for="period">Period</label>
+        <input type="text" class="form-control" name="period" id="period" required>
+    </div>
+
+    <div class="form-group">
+        <label for="number">Section Number</label>
+        <input type="text" class="form-control" name="number" id="number" required>
+    </div>
+
+    <div class="form-group">
+        <label for="professor_id">Professor</label>
+        <select class="form-control" name="professor_id" id="professor_id" required>
+            {% for professor in professors %}
+            <option value="{{ professor.id }}">{{ professor.name }} ({{ professor.email }})</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <button type="submit" class="btn btn-success">Create</button>
+    <a href="{{ url_for('list_sections', course_id=course.id) }}" class="btn btn-secondary">Cancel</a>
+</form>
+{% endblock %}

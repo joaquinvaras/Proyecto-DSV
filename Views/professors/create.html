@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Create Professor{% endblock %}
+{% block content %}
+    <h2>Create Professor</h2>
+    <form method="POST" action="{{ url_for('create_professor') }}">
+        <div class="mb-3">
+            <label for="name" class="form-label">Name</label>
+            <input 
+                type="text" 
+                class="form-control" 
+                id="name" 
+                name="name" 
+                placeholder="Enter professor name" 
+                required>
+        </div>
+        <div class="mb-3">
+            <label for="email" class="form-label">Email</label>
+            <input 
+                type="email" 
+                class="form-control" 
+                id="email" 
+                name="email" 
+                placeholder="Enter professor email" 
+                required>
+        </div>
+        <button type="submit" class="btn btn-success">Create</button>
+        <a href="{{ url_for('list_professors') }}" class="btn btn-secondary">Cancel</a>
+    </form>
+{% endblock %}
