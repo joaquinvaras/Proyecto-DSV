@@ -5,27 +5,39 @@
 <h2>Edit Course</h2>
 <form method="POST">
     <div class="mb-3">
-        <label>Course Name</label>
+        <label class="form-label">Course Name</label>
         <input type="text" name="name" value="{{ course.name }}" class="form-control" required>
     </div>
     <div class="mb-3">
-        <label>NRC</label>
+        <label class="form-label">NRC</label>
         <input type="text" name="nrc" value="{{ course.nrc }}" class="form-control" required>
     </div>
 
     <div class="mb-3">
-        <label>Prerequisite Courses</label><br>
-        {% for c in all_courses %}
-            {% if c.id != course.id %}
-            <div class="form-check">
-                <input class="form-check-input" type="checkbox" name="prerequisites" value="{{ c.id }}"
-                    {% if c.id in selected_prerequisites %}checked{% endif %}>
-                <label class="form-check-label">{{ c.name }} (NRC: {{ c.nrc }})</label>
-            </div>
-            {% endif %}
-        {% endfor %}
+        <label class="form-label">Prerequisite Courses</label>
+        <div class="form-text">Select courses that must be completed before taking this one</div>
+        
+        {% if all_courses|length > 1 %}
+            {% for c in all_courses %}
+                {% if c.id != course.id %} {# No permitir que un curso sea prerrequisito de sí mismo #}
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" 
+                           name="prerequisites" 
+                           value="{{ c.id }}"
+                           id="prereq_{{ c.id }}"
+                           {% if c.id in current_prerequisites %}checked{% endif %}>
+                    <label class="form-check-label" for="prereq_{{ c.id }}">
+                        {{ c.name }} (NRC: {{ c.nrc }})
+                    </label>
+                </div>
+                {% endif %}
+            {% endfor %}
+        {% else %}
+            <div class="alert alert-info">No other courses available to set as prerequisites</div>
+        {% endif %}
     </div>
 
-    <button type="submit" class="btn btn-success">Save</button>
+    <button type="submit" class="btn btn-success">Save Changes</button>
+    <a href="{{ url_for('list_courses') }}" class="btn btn-secondary">Cancel</a>
 </form>
 {% endblock %}

@@ -30,14 +30,12 @@ class CourseService:
 
         cursor = self.db.connect()
 
-        # Insert new course
         cursor.execute(
             "INSERT INTO Courses (name, nrc) VALUES (%s, %s)",
             (name, nrc)
         )
         course_id = cursor.lastrowid
 
-        # Insert prerequisites
         for prereq_id in prerequisites:
             cursor.execute(
                 "INSERT INTO CoursePrerequisites (course_id, prerequisite_id) VALUES (%s, %s)",
@@ -52,19 +50,16 @@ class CourseService:
 
         cursor = self.db.connect()
 
-        # Update basic course data
         cursor.execute(
             "UPDATE Courses SET name = %s, nrc = %s WHERE id = %s",
             (name, nrc, course_id)
         )
 
-        # Delete old prerequisites
         cursor.execute(
             "DELETE FROM CoursePrerequisites WHERE course_id = %s",
             (course_id,)
         )
 
-        # Insert new prerequisites
         for prereq_id in prerequisites:
             cursor.execute(
                 "INSERT INTO CoursePrerequisites (course_id, prerequisite_id) VALUES (%s, %s)",
@@ -76,10 +71,8 @@ class CourseService:
     def delete(self, course_id):
         cursor = self.db.connect()
 
-        # First delete from prerequisites table to avoid foreign key conflicts
         cursor.execute("DELETE FROM CoursePrerequisites WHERE course_id = %s", (course_id,))
 
-        # Then delete the course
         cursor.execute("DELETE FROM Courses WHERE id = %s", (course_id,))
 
         self.db.commit()

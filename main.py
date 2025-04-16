@@ -19,28 +19,45 @@ def index():
 @app.route('/courses')
 def list_courses():
     courses = course_service.get_all()
+    
+    for course in courses:
+        course['prerequisites'] = course_service.get_prerequisites(course['id'])
+
     return render_template('courses/list.html', courses=courses)
 
 @app.route('/courses/create', methods=['GET', 'POST'])
 def create_course():
     if request.method == 'POST':
         name = request.form['name']
-        ncr = request.form['ncr']
-        course_service.create(name, ncr)
+        nrc = request.form['nrc']
+        prerequisites = request.form.getlist('prerequisites')  
+        course_service.create(name, nrc, prerequisites)
         return redirect(url_for('list_courses'))
-    return render_template('courses/create.html')
+    all_courses = course_service.get_all()
+    return render_template('courses/create.html', all_courses=all_courses)
 
 @app.route('/courses/edit/<int:id>', methods=['GET', 'POST'])
 def edit_course(id):
     course = course_service.get_by_id(id)
     if not course:
         return "Course not found", 404
+    
+
+    all_courses = course_service.get_all()
+    all_courses = [c for c in all_courses if c['id'] != course['id']]
+
+
+    current_prerequisites = course_service.get_prerequisites(id)
+
     if request.method == 'POST':
         name = request.form['name']
-        ncr = request.form['ncr']
-        course_service.update(id, name, ncr)
+        nrc = request.form['nrc']
+        prerequisites = request.form.getlist('prerequisites')  
+        course_service.update(id, name, nrc, prerequisites)
         return redirect(url_for('list_courses'))
-    return render_template('courses/edit.html', course=course)
+    
+    return render_template('courses/edit.html', course=course, all_courses=all_courses, current_prerequisites=[c['id'] for c in current_prerequisites])
+
 
 @app.route('/courses/delete/<int:id>', methods=['POST'])
 def delete_course(id):
