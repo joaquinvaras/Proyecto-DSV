@@ -19,7 +19,7 @@
         
         {% if all_courses|length > 1 %}
             {% for c in all_courses %}
-                {% if c.id != course.id %} {# No permitir que un curso sea prerrequisito de sí mismo #}
+                {% if c.id != course.id %}
                 <div class="form-check">
                     <input class="form-check-input" type="checkbox" 
                            name="prerequisites" 

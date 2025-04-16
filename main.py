@@ -2,14 +2,14 @@ from flask import Flask, render_template, request, redirect, url_for
 from Service.course_service import CourseService
 from Service.user_service import UserService
 from Service.section_service import SectionService
-from Service.course_taken_service import CourseTakenService  # Import the new service
+from Service.course_taken_service import CourseTakenService
 
 app = Flask(__name__, template_folder='Views')
 
 course_service = CourseService()
 user_service = UserService()
 section_service = SectionService()
-course_taken_service = CourseTakenService()  # Instantiate the course_taken_service
+course_taken_service = CourseTakenService()
 
 @app.route('/')
 def index():

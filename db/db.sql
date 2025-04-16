@@ -1,10 +1,3 @@
-CREATE TABLE registros (
-    id serial primary key,
-    texto varchar(255),
-    numero int
-);
-
-
 CREATE TABLE Users (
     id INT PRIMARY KEY AUTO_INCREMENT,
     name VARCHAR(100),
@@ -52,6 +45,7 @@ CREATE TABLE Activities (
     name VARCHAR(100),
     weight INT,
     weight_or_percentage BOOLEAN,
+    optional_flag BOOLEAN,
     FOREIGN KEY (topic_id) REFERENCES Topics(id)
 );
 
