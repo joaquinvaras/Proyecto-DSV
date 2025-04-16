@@ -18,6 +18,16 @@ Para ejecutar el aplicativo se deben seguir los siguientes pasos:
 * Ejecutar la aplicación desde ```main.py``` con el comando ```python .\main.py```
     * Por defecto la aplicación se ejecuta en ```localhost``` en el puerto ```5000```
 
+
+## Pasos especificos de instalacion que usamos
+- Docker windows tiene que esta ejecutandose en segundo plano
+- Iniciar una consola en modo administrador o super usuario e ingresar ```docker compose up``` en la carpeta ```db```
+- Conectar DBeaver a la base de datos MySQL en localhost dejando todo por defecto, luego cambiar en la configuracion de la base de datos en Driver Properties ```allowPublicKeyRetrieval``` dejarlo en ```false``` y ```useSSL``` como ```true```
+- Ejecutar el script ```db.sql``` que se encuentra en la carpeta ```db```
+- Instalar las dependencias mediante ```pip install -r requirements.txt```
+- Ejecutar el programa principal de python con ```python .\main.py```
+
+
 ## Uso del programa
 La pagina web contiene unicamente los CRUD de sistemas que consisten en lo siguiente:
 
@@ -30,3 +40,4 @@ La pagina web contiene unicamente los CRUD de sistemas que consisten en lo sigui
 - Instanciacion de cursos: De la lista de cursos se selecciona uno y se pueden crear instancias designando un profesor, el periodo que se dicta y un numero para identificarlo
 
 - A una seccion se le pueden añadir alumnos individualmente
+
