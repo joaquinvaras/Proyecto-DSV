@@ -1,18 +1,4 @@
-# Prueba de concepto #
-
-## Explicación ##
-Esta aplicación de prueba permite a los usuarios subir registros y observarlos, ya sea uno de ellos o todos. Esta prueba de concepto les permitirá entender cómo empezar a realizar el proyecto del curso de Software Verificable.
-
-En esta prueba de concepto, un registro contiene dos parámetros:
-* Texto: Es cualquier clase de texto
-* Numero: un número cualquiera
-
-Esta versión contiene 3 vistas principales:
-* Ver todos los registros (```/``` o ```/register```): Esta vista permite ver todos los registros
-* Ver un registro (```/register/<id>```): Esta vista permite ver el registro con id ```<id>```
-* Crear un registro (```/create```): Esta vista permite crear un registro, en esta prueba de concepto se pueden crear registros de dos formas distinas:
-    * Formulario: Se puede agregar un registro mediante un formulario
-    * Archivo JSON: Se pueden agregar uno o varios registros mediante un archivo JSON como el adjunto en este repositorio (```test.json```)
+# Proyecto 1 #
 
 ## Cómo ejecutar el aplicativo ##
 Para ejecutar el aplicativo se deben seguir los siguientes pasos:
@@ -32,29 +18,15 @@ Para ejecutar el aplicativo se deben seguir los siguientes pasos:
 * Ejecutar la aplicación desde ```main.py``` con el comando ```python .\main.py```
     * Por defecto la aplicación se ejecuta en ```localhost``` en el puerto ```5000```
 
-## Cómo ejecutar las pruebas ##
-En esta prueba de concepto existe un archivo de pruebas unitarias (```test.py```) que permite evaluar la funcionalidad de cada uno de los aplicativos, se puede ejecutar el test utilizando el siguiente comando:
+## Uso del programa
+La pagina web contiene unicamente los CRUD de sistemas que consisten en lo siguiente:
 
-```pytest test.py```
+- Cursos: La creacion de cursos requiere solo seleccionar un nombre y un NRC (numero de identificacion), y se pueden seleccionar los cursos que se quieren definir como requisitos de este
 
-Si no funciona el comando anterior, se puede ejecutar desde python con el siguiente comando:
+- Alumno: Crear un alumno solo requiere nombre, mail y seleccionar la fecha de cuando ingreso
 
-```python -m pytest test.py```
+- Profesor: Para el profesor es lo mismo, requiere su nombre, mail y fecha desde la que trabaja
 
-Con las bibliotecas ```coverage``` y ```pytest-cov``` se pueden generar reportes de cobertura de código después de ejecutar los tests, para ello se debe ejecutar el siguiente comando:
+- Instanciacion de cursos: De la lista de cursos se selecciona uno y se pueden crear instancias designando un profesor, el periodo que se dicta y un numero para identificarlo
 
-```pytest --cov=. test.py --cov-report html```
-
-Si no funciona el comando anterior, se puede ejecutar desde python con el siguiente comando:
-
-```python -m pytest --cov=. test.py --cov-report html```
-
-Ya con el reporte generado, se debe haber creado una carpeta llamada ```htmlcov```, dentro de ésta se muestrá un archivo ```index.html```, al abrirlo se mostrará la cobertura de codigo a través de los tests.
-
-
-## Extensiones para verificar código limpio
-En esta sección se propondran extensiones/plugins que pueden instalar para verificar que cumplen con parte de las buenas prácticas del codigo limpio (clean code)
-
-* SonarLint: Extensión para encontrar y corregir problemas de codificación en tiempo real, marcando los problemas a medida que codifica, similar a un corrector ortográfico. Se puede instalar como un plugin en Intellij o como extensión en Visual Studio Code.
-* Code Spell Checker: Extensión que ayuda a detectar nombres de variables que puedan tener algun problema de nombre ya sea por falta ortográfica o por incoherencia. Se puede instalar en Visual Studio Code en muchos idiomas incluyendo Español. En Intellij viene por defecto.
-  
+- A una seccion se le pueden añadir alumnos individualmente
