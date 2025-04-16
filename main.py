@@ -1,62 +1,119 @@
-from flask import Flask, redirect, render_template, request
-from http_errors import HTTP_BAD_REQUEST, HTTP_NOT_FOUND
-from service import RegisterManager
-from settings import ALL_REGISTER_PAGE, CREATE_PAGE, JSON_FILE, REGISTER_PAGE, VIEW_BASE_URL
+from flask import Flask, render_template, request, redirect, url_for
+from Service.course_service import CourseService
+from Service.user_service import UserService
 
-app = Flask(__name__)
-app.template_folder = VIEW_BASE_URL
-app.static_folder = VIEW_BASE_URL
+app = Flask(__name__, template_folder='Views')
 
-registerManager = RegisterManager()
-
-################
-## CONTROLLER ##
-################
-@app.route('/register', methods=['POST'])
-def post_register():
-    text = request.form["textInput"]
-    number = request.form["numInput"]
-    if len(text) == 0:
-        return render_template(CREATE_PAGE, error="El campo 'texto' no puede ser vacío", form = request.form), HTTP_BAD_REQUEST
-    if not number:
-        return render_template(CREATE_PAGE, error="El campo 'numero' no puede ser vacío", form = request.form), HTTP_BAD_REQUEST
-    result = registerManager.post_register_to_db(text, number)
-    return redirect('/register', result)
-
-@app.route('/load_json', methods=['POST'])
-def post_json():
-    file = request.files["fileInput"]
-    filename = file.filename
-    if filename[-4:] != JSON_FILE:
-        return render_template(CREATE_PAGE, file_error="La extensión del archivo debe ser .json", form = request.form), HTTP_BAD_REQUEST
-    result = registerManager.process_json(file)
-    return redirect('/register', result)
+# Services
+course_service = CourseService()
+user_service = UserService()
 
 
-################
-#### VIEWS #####
-################
 @app.route('/')
 def index():
-    return get_all_registers()
+    return render_template('home.html')
 
-@app.route('/create')
-def create_register():
-    return render_template(CREATE_PAGE, form={"textInput": '', "numInput": ''})
 
-@app.route('/register')
-def get_all_registers():
-    registers = registerManager.get_all_registers()
-    return render_template(ALL_REGISTER_PAGE, data=registers)
+@app.route('/cursos')
+def list_cursos():
+    cursos = course_service.get_all()
+    return render_template('cursos/list.html', cursos=cursos)
 
-@app.route('/register/<id>')
-def get_register_by_id(id):
-    register = registerManager.get_register_by_id(id)
-    return render_template(REGISTER_PAGE, data=register)
+@app.route('/cursos/create', methods=['GET', 'POST'])
+def create_curso():
+    if request.method == 'POST':
+        name = request.form['name']
+        ncr = request.form['ncr']
+        course_service.create(name, ncr)
+        return redirect(url_for('list_cursos'))
+    return render_template('cursos/create.html')
 
-@app.errorhandler(HTTP_NOT_FOUND)
-def page_not_found(e):
-    return render_template(f'error/{HTTP_NOT_FOUND}.html'), HTTP_NOT_FOUND
+@app.route('/cursos/edit/<int:id>', methods=['GET', 'POST'])
+def edit_curso(id):
+    curso = course_service.get_by_id(id)
+    if not curso:
+        return "Curso no encontrado", 404
+    if request.method == 'POST':
+        name = request.form['name']
+        ncr = request.form['ncr']
+        course_service.update(id, name, ncr)
+        return redirect(url_for('list_cursos'))
+    return render_template('cursos/edit.html', curso=curso)
+
+@app.route('/cursos/delete/<int:id>', methods=['POST'])
+def delete_curso(id):
+    course_service.delete(id)
+    return redirect(url_for('list_cursos'))
+
+
+@app.route('/profesores')
+def list_profesores():
+    profesores = user_service.get_all_professors()
+    return render_template('profesores/list.html', profesores=profesores)
+
+@app.route('/profesores/create', methods=['GET', 'POST'])
+def create_profesor():
+    if request.method == 'POST':
+        name = request.form['name']
+        email = request.form['email']
+        user_service.create(name, email, is_professor=True)
+        return redirect(url_for('list_profesores'))
+    return render_template('profesores/create.html')
+
+@app.route('/profesores/edit/<int:id>', methods=['GET', 'POST'])
+def edit_profesor(id):
+    profesor = user_service.get_by_id(id)
+    if not profesor or not profesor['Is_professor']:
+        return "Profesor no encontrado", 404
+    if request.method == 'POST':
+        name = request.form['name']
+        email = request.form['email']
+        user_service.update(id, name, email)
+        return redirect(url_for('list_profesores'))
+    return render_template('profesores/edit.html', profesor=profesor)
+
+@app.route('/profesores/delete/<int:id>', methods=['POST'])
+def delete_profesor(id):
+    user_service.delete(id)
+    return redirect(url_for('list_profesores'))
+
+
+@app.route('/alumnos')
+def list_alumnos():
+    alumnos = user_service.get_all_students()
+    return render_template('alumnos/list.html', alumnos=alumnos)
+
+@app.route('/alumnos/create', methods=['GET', 'POST'])
+def create_alumno():
+    if request.method == 'POST':
+        name = request.form['name']
+        email = request.form['email']
+        entry_date = request.form['entry_date']
+        user_service.create(name, email, is_professor=False, entry_date=entry_date)
+        return redirect(url_for('list_alumnos'))
+    return render_template('alumnos/create.html')
+
+@app.route('/alumnos/edit/<int:id>', methods=['GET', 'POST'])
+def edit_alumno(id):
+    alumno = user_service.get_by_id(id)
+    if not alumno or alumno['Is_professor']:
+        return "Alumno no encontrado", 404
+    if request.method == 'POST':
+        name = request.form['name']
+        email = request.form['email']
+        entry_date = request.form['entry_date']
+        user_service.update(id, name, email, entry_date)
+        return redirect(url_for('list_alumnos'))
+    return render_template('alumnos/edit.html', alumno=alumno)
+
+@app.route('/alumnos/delete/<int:id>', methods=['POST'])
+def delete_alumno(id):
+    user_service.delete(id)
+    return redirect(url_for('list_alumnos'))
+
+#####################################
+# RUN APP
+#####################################
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Crear Curso{% endblock %}
+{% block content %}
+<h2>Crear Curso</h2>
+<form method="POST">
+    <div class="mb-3">
+        <label>Nombre</label>
+        <input type="text" name="name" class="form-control" required>
+    </div>
+    <div class="mb-3">
+        <label>NCR</label>
+        <input type="text" name="ncr" class="form-control" required>
+    </div>
+    <button type="submit" class="btn btn-success">Guardar</button>
+</form>
+{% endblock %}
