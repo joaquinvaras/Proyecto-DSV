@@ -6,31 +6,80 @@ class CourseService:
 
     def get_all(self):
         cursor = self.db.connect()
-        cursor.execute("SELECT * FROM Course")
+        cursor.execute("SELECT * FROM Courses")
         return cursor.fetchall()
 
     def get_by_id(self, course_id):
         cursor = self.db.connect()
-        cursor.execute("SELECT * FROM Course WHERE Id = %s", (course_id,))
+        cursor.execute("SELECT * FROM Courses WHERE id = %s", (course_id,))
         return cursor.fetchone()
 
-    def create(self, name, ncr, prerequisite):
+    def get_prerequisites(self, course_id):
         cursor = self.db.connect()
+        query = """
+            SELECT c.* FROM Courses c
+            JOIN CoursePrerequisites cp ON c.id = cp.prerequisite_id
+            WHERE cp.course_id = %s
+        """
+        cursor.execute(query, (course_id,))
+        return cursor.fetchall()
+
+    def create(self, name, nrc, prerequisites=None):
+        if prerequisites is None:
+            prerequisites = []
+
+        cursor = self.db.connect()
+
+        # Insert new course
         cursor.execute(
-            "INSERT INTO Course (Name, NCR, Prerequisite) VALUES (%s, %s, %s)",
-            (name, ncr, prerequisite)
+            "INSERT INTO Courses (name, nrc) VALUES (%s, %s)",
+            (name, nrc)
         )
+        course_id = cursor.lastrowid
+
+        # Insert prerequisites
+        for prereq_id in prerequisites:
+            cursor.execute(
+                "INSERT INTO CoursePrerequisites (course_id, prerequisite_id) VALUES (%s, %s)",
+                (course_id, prereq_id)
+            )
+
         self.db.commit()
 
-    def update(self, course_id, name, ncr, prerequisite):
+    def update(self, course_id, name, nrc, prerequisites=None):
+        if prerequisites is None:
+            prerequisites = []
+
         cursor = self.db.connect()
+
+        # Update basic course data
         cursor.execute(
-            "UPDATE Course SET Name = %s, NCR = %s, Prerequisite = %s WHERE Id = %s",
-            (name, ncr, prerequisite, course_id)
+            "UPDATE Courses SET name = %s, nrc = %s WHERE id = %s",
+            (name, nrc, course_id)
         )
+
+        # Delete old prerequisites
+        cursor.execute(
+            "DELETE FROM CoursePrerequisites WHERE course_id = %s",
+            (course_id,)
+        )
+
+        # Insert new prerequisites
+        for prereq_id in prerequisites:
+            cursor.execute(
+                "INSERT INTO CoursePrerequisites (course_id, prerequisite_id) VALUES (%s, %s)",
+                (course_id, prereq_id)
+            )
+
         self.db.commit()
 
     def delete(self, course_id):
         cursor = self.db.connect()
-        cursor.execute("DELETE FROM Course WHERE Id = %s", (course_id,))
+
+        # First delete from prerequisites table to avoid foreign key conflicts
+        cursor.execute("DELETE FROM CoursePrerequisites WHERE course_id = %s", (course_id,))
+
+        # Then delete the course
+        cursor.execute("DELETE FROM Courses WHERE id = %s", (course_id,))
+
         self.db.commit()

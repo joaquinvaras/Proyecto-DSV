@@ -14,102 +14,109 @@ def index():
     return render_template('home.html')
 
 
-@app.route('/cursos')
-def list_cursos():
-    cursos = course_service.get_all()
-    return render_template('cursos/list.html', cursos=cursos)
+# ---------------- COURSES ----------------
 
-@app.route('/cursos/create', methods=['GET', 'POST'])
-def create_curso():
+@app.route('/courses')
+def list_courses():
+    courses = course_service.get_all()
+    return render_template('courses/list.html', courses=courses)
+
+@app.route('/courses/create', methods=['GET', 'POST'])
+def create_course():
     if request.method == 'POST':
         name = request.form['name']
         ncr = request.form['ncr']
         course_service.create(name, ncr)
-        return redirect(url_for('list_cursos'))
-    return render_template('cursos/create.html')
+        return redirect(url_for('list_courses'))
+    return render_template('courses/create.html')
 
-@app.route('/cursos/edit/<int:id>', methods=['GET', 'POST'])
-def edit_curso(id):
-    curso = course_service.get_by_id(id)
-    if not curso:
-        return "Curso no encontrado", 404
+@app.route('/courses/edit/<int:id>', methods=['GET', 'POST'])
+def edit_course(id):
+    course = course_service.get_by_id(id)
+    if not course:
+        return "Course not found", 404
     if request.method == 'POST':
         name = request.form['name']
         ncr = request.form['ncr']
         course_service.update(id, name, ncr)
-        return redirect(url_for('list_cursos'))
-    return render_template('cursos/edit.html', curso=curso)
+        return redirect(url_for('list_courses'))
+    return render_template('courses/edit.html', course=course)
 
-@app.route('/cursos/delete/<int:id>', methods=['POST'])
-def delete_curso(id):
+@app.route('/courses/delete/<int:id>', methods=['POST'])
+def delete_course(id):
     course_service.delete(id)
-    return redirect(url_for('list_cursos'))
+    return redirect(url_for('list_courses'))
 
 
-@app.route('/profesores')
-def list_profesores():
-    profesores = user_service.get_all_professors()
-    return render_template('profesores/list.html', profesores=profesores)
+# ---------------- PROFESSORS ----------------
 
-@app.route('/profesores/create', methods=['GET', 'POST'])
-def create_profesor():
+@app.route('/professors')
+def list_professors():
+    professors = user_service.get_all_professors()
+    return render_template('professors/list.html', professors=professors)
+
+@app.route('/professors/create', methods=['GET', 'POST'])
+def create_professor():
     if request.method == 'POST':
         name = request.form['name']
         email = request.form['email']
         user_service.create(name, email, is_professor=True)
-        return redirect(url_for('list_profesores'))
-    return render_template('profesores/create.html')
+        return redirect(url_for('list_professors'))
+    return render_template('professors/create.html')
 
-@app.route('/profesores/edit/<int:id>', methods=['GET', 'POST'])
-def edit_profesor(id):
-    profesor = user_service.get_by_id(id)
-    if not profesor or not profesor['Is_professor']:
-        return "Profesor no encontrado", 404
+@app.route('/professors/edit/<int:id>', methods=['GET', 'POST'])
+def edit_professor(id):
+    professor = user_service.get_by_id(id)
+    if not professor or not professor['Is_professor']:
+        return "Professor not found", 404
     if request.method == 'POST':
         name = request.form['name']
         email = request.form['email']
         user_service.update(id, name, email)
-        return redirect(url_for('list_profesores'))
-    return render_template('profesores/edit.html', profesor=profesor)
+        return redirect(url_for('list_professors'))
+    return render_template('professors/edit.html', professor=professor)
 
-@app.route('/profesores/delete/<int:id>', methods=['POST'])
-def delete_profesor(id):
+@app.route('/professors/delete/<int:id>', methods=['POST'])
+def delete_professor(id):
     user_service.delete(id)
-    return redirect(url_for('list_profesores'))
+    return redirect(url_for('list_professors'))
 
 
-@app.route('/alumnos')
-def list_alumnos():
-    alumnos = user_service.get_all_students()
-    return render_template('alumnos/list.html', alumnos=alumnos)
+# ---------------- STUDENTS ----------------
 
-@app.route('/alumnos/create', methods=['GET', 'POST'])
-def create_alumno():
+@app.route('/students')
+def list_students():
+    students = user_service.get_all_students()
+    return render_template('students/list.html', students=students)
+
+@app.route('/students/create', methods=['GET', 'POST'])
+def create_student():
     if request.method == 'POST':
         name = request.form['name']
         email = request.form['email']
         entry_date = request.form['entry_date']
         user_service.create(name, email, is_professor=False, entry_date=entry_date)
-        return redirect(url_for('list_alumnos'))
-    return render_template('alumnos/create.html')
+        return redirect(url_for('list_students'))
+    return render_template('students/create.html')
 
-@app.route('/alumnos/edit/<int:id>', methods=['GET', 'POST'])
-def edit_alumno(id):
-    alumno = user_service.get_by_id(id)
-    if not alumno or alumno['Is_professor']:
-        return "Alumno no encontrado", 404
+@app.route('/students/edit/<int:id>', methods=['GET', 'POST'])
+def edit_student(id):
+    student = user_service.get_by_id(id)
+    if not student or student['Is_professor']:
+        return "Student not found", 404
     if request.method == 'POST':
         name = request.form['name']
         email = request.form['email']
         entry_date = request.form['entry_date']
         user_service.update(id, name, email, entry_date)
-        return redirect(url_for('list_alumnos'))
-    return render_template('alumnos/edit.html', alumno=alumno)
+        return redirect(url_for('list_students'))
+    return render_template('students/edit.html', student=student)
 
-@app.route('/alumnos/delete/<int:id>', methods=['POST'])
-def delete_alumno(id):
+@app.route('/students/delete/<int:id>', methods=['POST'])
+def delete_student(id):
     user_service.delete(id)
-    return redirect(url_for('list_alumnos'))
+    return redirect(url_for('list_students'))
+
 
 #####################################
 # RUN APP
