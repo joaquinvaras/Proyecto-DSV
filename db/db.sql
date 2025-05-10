@@ -26,6 +26,7 @@ CREATE TABLE Sections (
     period VARCHAR(50),
     number INT,
     professor_id INT,
+    weight_or_percentage BOOLEAN,
     FOREIGN KEY (course_id) REFERENCES Courses(id),
     FOREIGN KEY (professor_id) REFERENCES Users(id)
 );
@@ -44,7 +45,6 @@ CREATE TABLE Activities (
     topic_id INT,
     name VARCHAR(100),
     weight INT,
-    weight_or_percentage BOOLEAN,
     optional_flag BOOLEAN,
     FOREIGN KEY (topic_id) REFERENCES Topics(id)
 );
