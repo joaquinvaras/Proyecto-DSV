@@ -1,15 +1,18 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, flash
 from Service.course_service import CourseService
 from Service.user_service import UserService
 from Service.section_service import SectionService
 from Service.course_taken_service import CourseTakenService
+from Service.topic_service import TopicService
 
 app = Flask(__name__, template_folder='Views')
+app.secret_key = 'some-secret-key'  
 
 course_service = CourseService()
 user_service = UserService()
 section_service = SectionService()
 course_taken_service = CourseTakenService()
+topic_service = TopicService()
 
 @app.route('/')
 def index():
@@ -55,6 +58,64 @@ def delete_course(id):
     course_service.delete(id)
     return redirect(url_for('list_courses'))
 
+# ---------------- TOPICS ----------------
+
+@app.route('/courses/<int:course_id>/sections/<int:section_id>/topics')
+def list_topics(course_id, section_id):
+    topics = topic_service.get_by_section_id(section_id)
+    section = section_service.get_by_id(section_id)
+    return render_template('topics/list.html', topics=topics, section=section)
+
+@app.route('/courses/<int:course_id>/sections/<int:section_id>/topics/create', methods=['GET', 'POST'], endpoint='create_topic')
+def create_topic(course_id, section_id):
+    if request.method == 'POST':
+        name = request.form['name']
+        weight = request.form['weight']
+        weight_or_percentage = 'weight_or_percentage' in request.form  
+
+        if weight_or_percentage:
+            total_percentage = topic_service.calculate_total_percentage(section_id)
+            if total_percentage + int(weight) > 100:
+                flash("Total percentage cannot exceed 100%")
+                return redirect(url_for('create_topic', course_id=course_id, section_id=section_id)) 
+
+        topic_service.create(name, section_id, weight, weight_or_percentage)
+        return redirect(url_for('list_topics', course_id=course_id, section_id=section_id))
+
+    return render_template('topics/create.html', course_id=course_id, section_id=section_id)
+
+@app.route('/topics/edit/<int:id>', methods=['GET', 'POST'])
+def edit_topic(id):
+    topic = topic_service.get_by_id(id)
+    if not topic:
+        return "Topic not found", 404
+
+    if request.method == 'POST':
+        name = request.form['name']
+        weight = request.form['weight']
+        weight_or_percentage = 'weight_or_percentage' in request.form  
+
+        if weight_or_percentage:
+            total_percentage = topic_service.calculate_total_percentage(topic['section_id'])
+            if total_percentage + int(weight) > 100:
+                flash("Total percentage cannot exceed 100%")
+                return redirect(url_for('edit_topic', id=id)) 
+
+        topic_service.update(id, name, weight, weight_or_percentage)
+        return redirect(url_for('list_topics', course_id=topic['course_id'], section_id=topic['section_id']))
+
+    return render_template('topics/edit.html', topic=topic)
+
+@app.route('/topics/delete/<int:id>', methods=['POST'])
+def delete_topic(id):
+    topic = topic_service.get_by_id(id)
+    if topic:
+        section_id = topic['section_id']
+        course_id = topic['course_id']
+        topic_service.delete(id)
+        return redirect(url_for('list_topics', course_id=course_id, section_id=section_id))
+    return "Topic not found", 404
+
 # ---------------- SECTIONS ----------------
 
 @app.route('/courses/<int:course_id>/sections')
@@ -71,11 +132,15 @@ def create_section(course_id):
         period = request.form['period']
         number = request.form['number']
         professor_id = request.form['professor_id']
-        section_service.create(course_id, period, number, professor_id)
+        weight_or_percentage = 'weight_or_percentage' in request.form  
+
+        section_service.create(course_id, period, number, professor_id, weight_or_percentage)
         return redirect(url_for('list_sections', course_id=course_id))
+
     professors = user_service.get_all(is_professor=True)
     course = course_service.get_by_id(course_id)
     return render_template('sections/create.html', course=course, professors=professors)
+
 
 @app.route('/sections/edit/<int:section_id>', methods=['GET', 'POST'])
 def edit_section(section_id):
@@ -93,12 +158,13 @@ def edit_section(section_id):
         period = request.form['period']
         number = request.form['number']
         professor_id = request.form['professor_id']
+        weight_or_percentage = 'weight_or_percentage' in request.form  
 
-        section_service.update(section_id, course['id'], period, number, professor_id)
-        
+        section_service.update(section_id, course['id'], period, number, professor_id, weight_or_percentage)
         return redirect(url_for('list_sections', course_id=course['id']))
 
     return render_template('sections/edit.html', section=section, course=course, professors=professors)
+
 
 @app.route('/sections/delete/<int:section_id>', methods=['POST'])
 def delete_section(section_id):
@@ -201,3 +267,4 @@ def delete_student(id):
 
 if __name__ == '__main__':
     app.run(debug=True)
+
