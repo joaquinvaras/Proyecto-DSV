@@ -495,6 +495,49 @@ def delete_student(id):
     user_service.delete(id)
     return redirect(url_for('list_students'))
 
+
+
+
+# ---------------- Uploads ----------------
+
+
+from Service.Import_service import ImportService
+
+import_service = ImportService()
+
+
+@app.route('/import', methods=['GET', 'POST'])
+def import_data():
+    file_types = [
+        'alumnos',
+        'profesores',
+        'cursos',
+        'instancias_cursos',
+        'instancias_cursos_secciones',
+        'alumnos_seccion',
+        'notas_alumnos',
+        'salas_clases'
+    ]
+
+    if request.method == 'POST':
+        uploaded_file = request.files.get('json_file')
+        selected_type = request.form.get('data_type')
+
+        if not uploaded_file or not selected_type:
+            flash("Please select a file and a file type.")
+            return redirect(request.url)
+
+        try:
+            import_service.import_json(uploaded_file, selected_type)
+            flash(f"Datos importados exitosamente como {selected_type}.")
+        except Exception as e:
+            flash(f"Error al importar datos: {str(e)}")
+
+        return redirect(url_for('import_data'))
+
+    return render_template('import/upload.html', file_types=file_types)
+
+
+
 if __name__ == '__main__':
     app.run(debug=True)
-

@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Section{% endblock %}
+
+{% block content %}
+
+    <!DOCTYPE html>
+    <html lang="en">
+    <body>
+        <h2>Import JSON Data</h2>
+
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <ul>
+                    {% for message in messages %}
+                        <li>{{ message }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        {% endwith %}
+
+        <form method="POST" enctype="multipart/form-data" action="/import">
+            <label for="json_file">Selecciona un archivo JSON:</label>
+            <input type="file" name="json_file" accept=".json" required><br><br>
+          
+            <label for="data_type">Selecciona el tipo de archivo:</label>
+            <select name="data_type" required>
+              <option value="alumnos">Alumnos</option>
+              <option value="profesores">Profesores</option>
+              <option value="cursos">Cursos</option>
+              <option value="instancias_cursos">Instancias de cursos</option>
+              <option value="instancias_cursos_secciones">Instancias de cursos con secciones</option>
+              <option value="alumnos_seccion">Alumnos por seccion</option>
+              <option value="notas_alumnos">Notas de alumnos</option>
+              <option value="salas_clases">Salas de clases</option>
+            </select>
+          
+            <button type="submit">Importar</button>
+          </form>
+    </body>
+    </html>
+
+{% endblock %}
