@@ -63,7 +63,7 @@ CREATE TABLE Grades (
     id INT PRIMARY KEY AUTO_INCREMENT,
     activity_id INT,
     user_id INT,
-    grade INT,
+    grade DECIMAL(2,1),
     UNIQUE (user_id, activity_id),
     FOREIGN KEY (activity_id) REFERENCES Activities(id),
     FOREIGN KEY (user_id) REFERENCES Users(id)

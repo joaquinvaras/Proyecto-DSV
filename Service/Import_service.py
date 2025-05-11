@@ -269,7 +269,7 @@ class ImportService:
                 cursor.execute("""
                     INSERT INTO Grades (activity_id, user_id, grade)
                     VALUES (%s, %s, %s)
-                """, (activity_id, alumno_id, int(nota * 10)))
+                """, (activity_id, alumno_id, nota))
                 print(f"[SUCCESS] Inserted grade for alumno_id {alumno_id}, activity_id {activity_id}: {nota}")
 
             except Exception as e:
