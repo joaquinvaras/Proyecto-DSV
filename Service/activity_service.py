@@ -16,23 +16,35 @@ class ActivityService:
     
     def get_by_topic_id(self, topic_id):
         cursor = self.db.connect()
-        cursor.execute("SELECT * FROM Activities WHERE topic_id = %s", (topic_id,))
+        cursor.execute("SELECT * FROM Activities WHERE topic_id = %s ORDER BY instance", (topic_id,))
         return cursor.fetchall()
     
-    def create(self, name, topic_id, weight, optional_flag):
-
+    def get_next_instance_number(self, topic_id):
         cursor = self.db.connect()
         cursor.execute(
-            "INSERT INTO Activities (name, topic_id, weight, optional_flag) VALUES (%s, %s, %s, %s)",
-            (name, topic_id, weight, optional_flag)
+            "SELECT MAX(instance) as max_instance FROM Activities WHERE topic_id = %s", 
+            (topic_id,)
+        )
+        result = cursor.fetchone()
+        
+        if not result or result['max_instance'] is None:
+            return 1
+        
+        return result['max_instance'] + 1
+    
+    def create(self, topic_id, instance, weight, optional_flag):
+        cursor = self.db.connect()
+        cursor.execute(
+            "INSERT INTO Activities (topic_id, instance, weight, optional_flag) VALUES (%s, %s, %s, %s)",
+            (topic_id, instance, weight, optional_flag)
         )
         self.db.commit()
     
-    def update(self, activity_id, name, weight, optional_flag):
+    def update(self, activity_id, instance, weight, optional_flag):
         cursor = self.db.connect()
         cursor.execute(
-            "UPDATE Activities SET name = %s, weight = %s, optional_flag = %s WHERE id = %s",
-            (name, weight, optional_flag, activity_id)
+            "UPDATE Activities SET instance = %s, weight = %s, optional_flag = %s WHERE id = %s",
+            (instance, weight, optional_flag, activity_id)
         )
         self.db.commit()
     
