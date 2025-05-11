@@ -246,32 +246,36 @@ class ImportService:
 
     def _import_notas_alumnos(self, data):
         cursor = self.db.connect()
-        notas = data.get("notas", [])
-
-        for nota_data in notas:
-            alumno_id = nota_data["alumno_id"]
-            topico_id = nota_data["topico_id"]
-            instancia = nota_data["instancia"]
-            nota_valor = nota_data["nota"]
+        notas = data["notas"]
+        for entry in notas:
+            alumno_id = entry["alumno_id"]
+            topico_id = entry["topico_id"]
+            instancia = entry["instancia"]
+            nota = entry["nota"]
 
             try:
                 cursor.execute("""
-                    INSERT INTO Grades (instance, topic_id, user_id, grade)
-                    VALUES (%s, %s, %s, %s)
-                """, (
-                    instancia,
-                    topico_id,
-                    alumno_id,
-                    int(nota_valor * 10)
-                ))
+                    SELECT id FROM Activities
+                    WHERE topic_id = %s AND instance = %s
+                """, (topico_id, instancia))
+                result = cursor.fetchone()
 
-                print(f"[SUCCESS] Nota inserted: alumno_id={alumno_id}, topico_id={topico_id}, instancia={instancia}, nota={nota_valor}")
+                if not result:
+                    print(f"[ERROR] No activity found for topico_id {topico_id} and instancia {instancia}")
+                    continue
+
+                activity_id = result["id"]
+
+                cursor.execute("""
+                    INSERT INTO Grades (activity_id, user_id, grade)
+                    VALUES (%s, %s, %s)
+                """, (activity_id, alumno_id, int(nota * 10)))
+                print(f"[SUCCESS] Inserted grade for alumno_id {alumno_id}, activity_id {activity_id}: {nota}")
 
             except Exception as e:
-                print(f"[ERROR] Failed to insert nota for alumno_id={alumno_id}, topico_id={topico_id}, instancia={instancia}: {e}")
+                print(f"[ERROR] Failed to insert grade for alumno_id {alumno_id}, topico_id {topico_id}, instancia {instancia}: {e}")
 
-        
-        self.db.commit()
+            self.db.commit()
 
     def _import_salas_clases(self, data):
         cursor = self.db.connect()

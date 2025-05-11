@@ -61,12 +61,11 @@ CREATE TABLE Activities (
 
 CREATE TABLE Grades (
     id INT PRIMARY KEY AUTO_INCREMENT,
-    instance INT,
-    topic_id INT,
+    activity_id INT,
     user_id INT,
     grade INT,
-    UNIQUE (instance, user_id, topic_id),
-    FOREIGN KEY (topic_id) REFERENCES Topics(id),
+    UNIQUE (user_id, activity_id),
+    FOREIGN KEY (activity_id) REFERENCES Activities(id),
     FOREIGN KEY (user_id) REFERENCES Users(id)
 );
 
