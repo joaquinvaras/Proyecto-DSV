@@ -14,7 +14,7 @@
             <th>Period</th>
             <th>Number</th>
             <th>Professor</th>
-            <th>Format</th>
+            <th>Section Format</th>
             <th>Topics</th>
             <th>Actions</th>
             <th>Enroll Students</th>
@@ -28,22 +28,55 @@
             <td>{{ section.professor_name }}</td>
             <td>
                 {% if section.weight_or_percentage %}
-                    Percentage-based
+                    <span class="badge bg-primary">Percentage-based</span>
                 {% else %}
-                    Weight-based
+                    <span class="badge bg-secondary">Weight-based</span>
                 {% endif %}
             </td>
             <td>
                 {% for topic in section.topics %}
-                    <div>
-                        {% if section.weight_or_percentage %}
-                            {{ topic.name }}: {{ topic.value }}%
-                        {% else %}
-                            {{ topic.name }}: {{ topic.value }}
-                        {% endif %}
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px;">
+                        <div>
+                            {% if section.weight_or_percentage %}
+                                {{ topic.name }}: {{ topic.value }}% 
+                                <small>
+                                    (Activities: 
+                                    {% if topic.weight_or_percentage %}
+                                        <span class="badge bg-primary">%</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">weight</span>
+                                    {% endif %}
+                                    )
+                                </small>
+                            {% else %}
+                                {{ topic.name }}: {{ topic.value }}
+                                <small>
+                                    (Activities: 
+                                    {% if topic.weight_or_percentage %}
+                                        <span class="badge bg-primary">%</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">weight</span>
+                                    {% endif %}
+                                    )
+                                </small>
+                            {% endif %}
+                        </div>
+                        <div style="display: flex; gap: 5px;">
+                            <a href="{{ url_for('edit_topic', id=topic.id) }}" class="btn btn-sm btn-outline-primary">Edit</a>
+                            
+                            {% if section.weight_or_percentage %}
+                                <a href="{{ url_for('delete_topic_percentage_view', id=topic.id) }}" class="btn btn-sm btn-outline-danger">Delete</a>
+                            {% else %}
+                                <form method="POST" action="{{ url_for('delete_topic_direct', id=topic.id) }}" style="display: inline;">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                                </form>
+                            {% endif %}
+                            
+                            <a href="{{ url_for('list_activities', topic_id=topic.id) }}" class="btn btn-sm btn-outline-info">Activities</a>
+                        </div>
                     </div>
                 {% endfor %}
-                <a href="{{ url_for('create_topic', course_id=course.id, section_id=section.id) }}" class="btn btn-success btn-sm mb-2">Create Topic</a>
+                <a href="{{ url_for('create_topic', course_id=course.id, section_id=section.id) }}" class="btn btn-success btn-sm mt-2">Create Topic</a>
             </td>
             
             <td>

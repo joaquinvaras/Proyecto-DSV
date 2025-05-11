@@ -4,6 +4,7 @@ from Service.user_service import UserService
 from Service.section_service import SectionService
 from Service.course_taken_service import CourseTakenService
 from Service.topic_service import TopicService
+from Service.activity_service import ActivityService
 
 app = Flask(__name__, template_folder='Views')
 app.secret_key = 'some-secret-key'  
@@ -13,6 +14,7 @@ user_service = UserService()
 section_service = SectionService()
 course_taken_service = CourseTakenService()
 topic_service = TopicService()
+activity_service = ActivityService()
 
 @app.route('/')
 def index():
@@ -64,25 +66,40 @@ def delete_course(id):
 def list_topics(course_id, section_id):
     topics = topic_service.get_by_section_id(section_id)
     section = section_service.get_by_id(section_id)
+    section['course_id'] = course_id
+    section['course_name'] = course_service.get_by_id(course_id)['name']
     return render_template('topics/list.html', topics=topics, section=section)
 
 @app.route('/courses/<int:course_id>/sections/<int:section_id>/topics/create', methods=['GET', 'POST'], endpoint='create_topic')
 def create_topic(course_id, section_id):
+    section = section_service.get_by_id(section_id)
+    topics = topic_service.get_by_section_id(section_id)
+
     if request.method == 'POST':
         name = request.form['name']
-        weight = request.form['weight']
-        weight_or_percentage = 'weight_or_percentage' in request.form  
+        weight_or_percentage = 'weight_or_percentage' in request.form
 
-        if weight_or_percentage:
-            total_percentage = topic_service.calculate_total_percentage(section_id)
-            if total_percentage + int(weight) > 100:
-                flash("Total percentage cannot exceed 100%")
-                return redirect(url_for('create_topic', course_id=course_id, section_id=section_id)) 
-
+        try:
+            weight = int(request.form['weight'])  
+        except (KeyError, ValueError):
+            flash("Invalid value for weight/percentage")
+            return redirect(url_for('create_topic', course_id=course_id, section_id=section_id))
         topic_service.create(name, section_id, weight, weight_or_percentage)
-        return redirect(url_for('list_topics', course_id=course_id, section_id=section_id))
 
-    return render_template('topics/create.html', course_id=course_id, section_id=section_id)
+        if section['weight_or_percentage']:
+            for topic in topics:
+                key = f'percentages_{topic["id"]}'
+                if key in request.form:
+                    try:
+                        updated_weight = int(request.form[key])
+                        topic_service.update(topic['id'], topic['name'], updated_weight, topic['weight_or_percentage'])
+                    except ValueError:
+                        flash(f"Invalid percentage for topic '{topic['name']}'")
+                        return redirect(url_for('create_topic', course_id=course_id, section_id=section_id))
+
+        return redirect(url_for('list_sections', course_id=course_id))
+
+    return render_template('topics/create.html', course_id=course_id, section_id=section_id, section=section, topics=topics)
 
 @app.route('/topics/edit/<int:id>', methods=['GET', 'POST'])
 def edit_topic(id):
@@ -90,41 +107,95 @@ def edit_topic(id):
     if not topic:
         return "Topic not found", 404
 
+    section = section_service.get_by_id(topic['section_id'])
+    topics = topic_service.get_by_section_id(section['id'])
+
     if request.method == 'POST':
         name = request.form['name']
-        weight = request.form['weight']
-        weight_or_percentage = 'weight_or_percentage' in request.form  
-
-        if weight_or_percentage:
-            total_percentage = topic_service.calculate_total_percentage(topic['section_id'])
-            if total_percentage + int(weight) > 100:
-                flash("Total percentage cannot exceed 100%")
-                return redirect(url_for('edit_topic', id=id)) 
-
+        weight = int(request.form['weight'])
+        weight_or_percentage = 'weight_or_percentage' in request.form
         topic_service.update(id, name, weight, weight_or_percentage)
-        return redirect(url_for('list_topics', course_id=topic['course_id'], section_id=topic['section_id']))
 
-    return render_template('topics/edit.html', topic=topic)
+        if section['weight_or_percentage']:
+            for t in topics:
+                if t['id'] == topic['id']:
+                    continue  
+                key = f'percentages_{t["id"]}'
+                if key in request.form:
+                    try:
+                        updated_weight = int(request.form[key])
+                        topic_service.update(t['id'], t['name'], updated_weight, t['weight_or_percentage'])
+                    except ValueError:
+                        flash(f"Invalid percentage for topic '{t['name']}'")
+                        return redirect(url_for('edit_topic', id=id))
 
-@app.route('/topics/delete/<int:id>', methods=['POST'])
-def delete_topic(id):
+        return redirect(url_for('list_sections', course_id=section['course_id']))
+
+    return render_template(
+        'topics/edit.html',
+        topic=topic,
+        section=section,
+        topics=topics
+    )
+
+@app.post('/topics/delete/<int:id>')
+def delete_topic_direct(id):
     topic = topic_service.get_by_id(id)
-    if topic:
-        section_id = topic['section_id']
-        course_id = topic['course_id']
-        topic_service.delete(id)
-        return redirect(url_for('list_topics', course_id=course_id, section_id=section_id))
-    return "Topic not found", 404
+    if not topic:
+        return "Topic not found", 404
+
+    section = section_service.get_by_id(topic['section_id'])
+    topic_service.delete(id)
+    return redirect(url_for('list_sections', course_id=section['course_id']))
+
+@app.route('/topics/delete/percentage/<int:id>', methods=['GET', 'POST'])
+def delete_topic_percentage_view(id):
+    topic = topic_service.get_by_id(id)
+    if not topic:
+        return "Topic not found", 404
+
+    section = section_service.get_by_id(topic['section_id'])
+    topics = topic_service.get_by_section_id(section['id'])
+    remaining_topics = [t for t in topics if t['id'] != id]
+
+    if request.method == 'POST':
+        try:
+            for t in remaining_topics:
+                new_weight = int(request.form[f'percentages_{t["id"]}'])
+                topic_service.update(t['id'], t['name'], new_weight, t['weight_or_percentage'])
+
+            topic_service.delete(id)
+            return redirect(url_for('list_sections', course_id=section['course_id']))
+        except ValueError:
+            flash("Invalid input. All percentages must be numbers.")
+            return redirect(request.url)
+
+    return render_template(
+        'topics/delete_percentage.html',
+        topic=topic,
+        section=section,
+        topics=remaining_topics
+    )
 
 # ---------------- SECTIONS ----------------
-
 @app.route('/courses/<int:course_id>/sections')
 def list_sections(course_id):
-    sections = section_service.get_by_course_id(course_id)  
-    course = course_service.get_by_id(course_id)  
-    students = user_service.get_all(is_professor=False)  
-    return render_template('sections/list.html', sections=sections, course=course, students=students)
+    sections = section_service.get_by_course_id(course_id)
+    course = course_service.get_by_id(course_id)
+    students = user_service.get_all(is_professor=False)
 
+    for section in sections:
+        topics = topic_service.get_by_section_id(section['id'])
+        section['topics'] = []
+        for topic in topics:
+            section['topics'].append({
+                'id': topic['id'],         
+                'name': topic['name'],
+                'value': topic['weight'],
+                'weight_or_percentage': topic.get('weight_or_percentage', False)  
+            })
+
+    return render_template('sections/list.html', sections=sections, course=course, students=students)
 
 @app.route('/courses/<int:course_id>/sections/create', methods=['GET', 'POST'])
 def create_section(course_id):
@@ -140,7 +211,6 @@ def create_section(course_id):
     professors = user_service.get_all(is_professor=True)
     course = course_service.get_by_id(course_id)
     return render_template('sections/create.html', course=course, professors=professors)
-
 
 @app.route('/sections/edit/<int:section_id>', methods=['GET', 'POST'])
 def edit_section(section_id):
@@ -164,7 +234,6 @@ def edit_section(section_id):
         return redirect(url_for('list_sections', course_id=course['id']))
 
     return render_template('sections/edit.html', section=section, course=course, professors=professors)
-
 
 @app.route('/sections/delete/<int:section_id>', methods=['POST'])
 def delete_section(section_id):
@@ -197,6 +266,167 @@ def list_students_in_section(course_id, section_id):
     return render_template('sections/students_in_section.html', 
                            course=course, section=section, enrollments=enrollments)
 
+# ---------------- ACTIVITIES ----------------
+
+@app.route('/topics/<int:topic_id>/activities')
+def list_activities(topic_id):
+    topic = topic_service.get_by_id(topic_id)
+    if not topic:
+        return "Topic not found", 404
+    
+    activities = activity_service.get_by_topic_id(topic_id)
+    section = section_service.get_by_id(topic['section_id'])
+    course = course_service.get_by_id(section['course_id'])
+    
+    return render_template(
+        'activities/list.html',
+        activities=activities,
+        topic=topic,
+        section=section,
+        course=course
+    )
+
+@app.route('/topics/<int:topic_id>/activities/create', methods=['GET', 'POST'])
+def create_activity(topic_id):
+    topic = topic_service.get_by_id(topic_id)
+    if not topic:
+        return "Topic not found", 404
+    
+    section = section_service.get_by_id(topic['section_id'])
+    course = course_service.get_by_id(section['course_id'])
+    activities = activity_service.get_by_topic_id(topic_id)
+    
+    if request.method == 'POST':
+        name = request.form['name']
+        optional_flag = 'optional' in request.form
+        
+        try:
+            weight = int(request.form['weight'])
+        except (KeyError, ValueError):
+            flash("Invalid value for weight/percentage")
+            return redirect(url_for('create_activity', topic_id=topic_id))
+        
+        activity_service.create(name, topic_id, weight, optional_flag)
+        
+        if topic['weight_or_percentage']:
+            for activity in activities:
+                key = f'percentages_{activity["id"]}'
+                if key in request.form:
+                    try:
+                        updated_weight = int(request.form[key])
+                        activity_service.update(activity['id'], activity['name'], updated_weight, activity['optional_flag'])
+                    except ValueError:
+                        flash(f"Invalid percentage for activity '{activity['name']}'")
+                        return redirect(url_for('create_activity', topic_id=topic_id))
+        
+        return redirect(url_for('list_activities', topic_id=topic_id))
+    
+    return render_template(
+        'activities/create.html',
+        topic=topic,
+        section=section,
+        course=course,
+        activities=activities
+    )
+
+@app.route('/activities/edit/<int:id>', methods=['GET', 'POST'])
+def edit_activity(id):
+    activity = activity_service.get_by_id(id)
+    if not activity:
+        return "Activity not found", 404
+    
+    topic = topic_service.get_by_id(activity['topic_id'])
+    if not topic:
+        return "Topic not found", 404
+    
+    section = section_service.get_by_id(topic['section_id'])
+    course = course_service.get_by_id(section['course_id'])
+    activities = activity_service.get_by_topic_id(topic['id'])
+    
+    if request.method == 'POST':
+        name = request.form['name']
+        optional_flag = 'optional' in request.form
+        
+        try:
+            weight = int(request.form['weight'])
+        except (KeyError, ValueError):
+            flash("Invalid value for weight/percentage")
+            return redirect(url_for('edit_activity', id=id))
+        
+        activity_service.update(id, name, weight, optional_flag)
+        
+        if topic['weight_or_percentage']:
+            for act in activities:
+                if act['id'] == activity['id']:
+                    continue  
+                
+                key = f'percentages_{act["id"]}'
+                if key in request.form:
+                    try:
+                        updated_weight = int(request.form[key])
+                        activity_service.update(act['id'], act['name'], updated_weight, act['optional_flag'])
+                    except ValueError:
+                        flash(f"Invalid percentage for activity '{act['name']}'")
+                        return redirect(url_for('edit_activity', id=id))
+        
+        return redirect(url_for('list_activities', topic_id=topic['id']))
+    
+    return render_template(
+        'activities/edit.html',
+        activity=activity,
+        topic=topic,
+        section=section,
+        course=course,
+        activities=activities
+    )
+
+@app.post('/activities/delete/<int:id>')
+def delete_activity_direct(id):
+
+    activity = activity_service.get_by_id(id)
+    if not activity:
+        return "Activity not found", 404
+    
+    topic = topic_service.get_by_id(activity['topic_id'])
+    activity_service.delete(id)
+    
+    return redirect(url_for('list_activities', topic_id=topic['id']))
+
+@app.route('/activities/delete/percentage/<int:id>', methods=['GET', 'POST'])
+def delete_activity_percentage_view(id):
+    activity = activity_service.get_by_id(id)
+    if not activity:
+        return "Activity not found", 404
+    
+    topic = topic_service.get_by_id(activity['topic_id'])
+    if not topic:
+        return "Topic not found", 404
+    
+    section = section_service.get_by_id(topic['section_id'])
+    activities = activity_service.get_by_topic_id(topic['id'])
+    remaining_activities = [a for a in activities if a['id'] != id]
+    
+    if request.method == 'POST':
+        try:
+            for act in remaining_activities:
+                new_weight = int(request.form[f'percentages_{act["id"]}'])
+                activity_service.update(act['id'], act['name'], new_weight, act['optional_flag'])
+            
+            activity_service.delete(id)
+            
+            return redirect(url_for('list_activities', topic_id=topic['id']))
+        except ValueError:
+            flash("Invalid input. All percentages must be numbers.")
+            return redirect(request.url)
+    
+    return render_template(
+        'activities/delete_percentage.html',
+        activity=activity,
+        topic=topic,
+        section=section,
+        activities=remaining_activities,
+        course=course_service.get_by_id(section['course_id'])
+    )
 # ---------------- PROFESSORS ----------------
 
 @app.route('/professors')

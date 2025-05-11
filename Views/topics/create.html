@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Create New Topic{% endblock %}
+{% block content %}
+<h1>Create New Topic</h1>
+<h4>Section {{ section.number }} - Period {{ section.period }}</h4>
+
+<form method="POST" onsubmit="return validateForm()" style="max-width: 500px; margin: auto; padding: 20px; border: 1px solid #ccc; border-radius: 8px;">
+    <div style="margin-bottom: 15px;">
+        <label for="name" style="font-weight: bold;">Topic Name:</label><br>
+        <input type="text" name="name" id="name" required style="width: 100%; padding: 8px;">
+    </div>
+    
+    <div style="margin-bottom: 15px;">
+        <label for="weight_or_percentage" style="font-weight: bold;">Format for Activities:</label><br>
+        <input type="checkbox" name="weight_or_percentage" id="weight_or_percentage"> 
+        <span>Check for percentage-based (activities must sum to 100%). Uncheck for weight-based.</span>
+    </div>
+    
+    {% if section.weight_or_percentage %}
+    <h3>Current Percentages in Section:</h3>
+    <ul style="list-style-type: none; padding-left: 0;">
+        {% for topic in topics %}
+        <li style="margin-bottom: 10px;">
+            <strong>{{ topic.name }}:</strong>
+            <input type="number" name="percentages_{{ topic.id }}" value="{{ topic.weight }}" step="1" min="1" max="100" required style="width: 70px;"> %
+        </li>
+        {% endfor %}
+    </ul>
+    <div style="margin-top: 15px;">
+        <label for="weight" style="font-weight: bold;">New Topic Percentage:</label><br>
+        <input type="number" name="weight" id="weight" step="1" min="1" max="100" required style="width: 100px;"> %
+    </div>
+    <p style="color: gray; margin-top: 5px;">Total must be exactly 100%</p>
+    {% else %}
+    <h3>Current Weights in Section:</h3>
+    <ul style="list-style-type: none; padding-left: 0;">
+        {% for topic in topics %}
+        <li style="margin-bottom: 5px;">
+            <strong>{{ topic.name }}:</strong> {{ topic.weight }}
+        </li>
+        {% endfor %}
+    </ul>
+    <div style="margin-top: 15px;">
+        <label for="weight" style="font-weight: bold;">New Topic Weight:</label><br>
+        <input type="number" step="1" name="weight" id="weight" required style="width: 100px;">
+    </div>
+    {% endif %}
+    <div style="margin-top: 20px; text-align: center;">
+        <a href="{{ url_for('list_sections', course_id=section.course_id) }}" class="btn btn-secondary">Cancel</a>
+        <button type="submit" class="btn btn-primary">Create Topic</button>
+    </div>
+</form>
+{% if section.weight_or_percentage %}
+<script>
+function validateForm() {
+    const inputs = document.querySelectorAll("input[type='number'][name^='percentages_']");
+    const newPercentage = parseInt(document.getElementById('weight').value);
+    let total = 0;
+    inputs.forEach(input => {
+        total += parseInt(input.value) || 0;
+    });
+    total += newPercentage;
+    if (total !== 100) {
+        alert("Total percentage must be exactly 100%. Current total: " + total + "%");
+        return false;
+    }
+    return true;
+}
+</script>
+{% endif %}
+{% endblock %}

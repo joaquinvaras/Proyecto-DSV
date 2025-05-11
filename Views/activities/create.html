@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}Create New Activity{% endblock %}
+
+{% block content %}
+<h1>Create New Activity</h1>
+<h4>Topic: {{ topic.name }} | Course: {{ course.name }} - Section {{ section.number }}</h4>
+<h5>Format: 
+    {% if topic.weight_or_percentage %}
+        <span class="badge bg-primary">Percentage-based (must sum to 100%)</span>
+    {% else %}
+        <span class="badge bg-secondary">Weight-based</span>
+    {% endif %}
+</h5>
+
+<form method="POST" onsubmit="return validateForm()" style="max-width: 500px; margin: auto; padding: 20px; border: 1px solid #ccc; border-radius: 8px;">
+    <div style="margin-bottom: 15px;">
+        <label for="name" style="font-weight: bold;">Activity Name:</label><br>
+        <input type="text" name="name" id="name" required style="width: 100%; padding: 8px;">
+    </div>
+    
+    <div style="margin-bottom: 15px;">
+        <label for="optional" style="font-weight: bold;">Optional:</label><br>
+        <input type="checkbox" name="optional" id="optional"> 
+        <span>Check if this activity is optional</span>
+        <small class="form-text text-muted d-block">
+            Optional activities are not counted if the student doesn't complete them.
+            Non-optional activities are counted as 1.0 if not completed.
+        </small>
+    </div>
+    
+    {% if topic.weight_or_percentage %}
+    <h3>Current Percentages:</h3>
+    <ul style="list-style-type: none; padding-left: 0;">
+        {% for activity in activities %}
+        <li style="margin-bottom: 10px;">
+            <strong>{{ activity.name }}:</strong>
+            <input type="number" name="percentages_{{ activity.id }}" value="{{ activity.weight }}" step="1" min="1" max="100" required style="width: 70px;"> %
+        </li>
+        {% endfor %}
+    </ul>
+    <div style="margin-top: 15px;">
+        <label for="weight" style="font-weight: bold;">New Activity Percentage:</label><br>
+        <input type="number" name="weight" id="weight" step="1" min="1" max="100" required style="width: 100px;"> %
+    </div>
+    <p style="color: gray; margin-top: 5px;">Total must be exactly 100%</p>
+    {% else %}
+    <h3>Current Weights:</h3>
+    <ul style="list-style-type: none; padding-left: 0;">
+        {% for activity in activities %}
+        <li style="margin-bottom: 5px;">
+            <strong>{{ activity.name }}:</strong> {{ activity.weight }}
+        </li>
+        {% endfor %}
+    </ul>
+    <div style="margin-top: 15px;">
+        <label for="weight" style="font-weight: bold;">New Activity Weight:</label><br>
+        <input type="number" step="1" name="weight" id="weight" required style="width: 100px;">
+    </div>
+    {% endif %}
+    
+    <div style="margin-top: 20px; text-align: center;">
+        <a href="{{ url_for('list_activities', topic_id=topic.id) }}" class="btn btn-secondary">Cancel</a>
+        <button type="submit" class="btn btn-primary">Create Activity</button>
+    </div>
+</form>
+
+{% if topic.weight_or_percentage %}
+<script>
+function validateForm() {
+    const inputs = document.querySelectorAll("input[type='number'][name^='percentages_']");
+    const newPercentage = parseInt(document.getElementById('weight').value);
+    let total = 0;
+    inputs.forEach(input => {
+        total += parseInt(input.value) || 0;
+    });
+    total += newPercentage;
+    if (total !== 100) {
+        alert("Total percentage must be exactly 100%. Current total: " + total + "%");
+        return false;
+    }
+    return true;
+}
+</script>
+{% endif %}
+{% endblock %}

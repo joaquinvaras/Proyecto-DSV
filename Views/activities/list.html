@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Activities for {{ topic.name }}{% endblock %}
+
+{% block content %}
+<h2>Activities for {{ topic.name }}</h2>
+<h4>Course: {{ course.name }} - Section {{ section.number }} - Period {{ section.period }}</h4>
+<h5>Format:
+    {% if topic.weight_or_percentage %}
+        <span class="badge bg-primary">Percentage-based (must sum to 100%)</span>
+    {% else %}
+        <span class="badge bg-secondary">Weight-based</span>
+    {% endif %}
+</h5>
+
+<a href="{{ url_for('create_activity', topic_id=topic.id) }}" class="btn btn-primary mb-3">Create Activity</a>
+<a href="{{ url_for('list_sections', course_id=section.course_id) }}" class="btn btn-secondary mb-3">Back to Sections</a>
+
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>{% if topic.weight_or_percentage %}Percentage{% else %}Weight{% endif %}</th>
+            <th>Optional</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% if activities %}
+            {% for activity in activities %}
+            <tr>
+                <td>{{ activity.name }}</td>
+                <td>
+                    {% if topic.weight_or_percentage %}
+                        {{ activity.weight }}%
+                    {% else %}
+                        {{ activity.weight }}
+                    {% endif %}
+                </td>
+                <td>
+                    {% if activity.optional_flag %}
+                        <span class="badge bg-success">Yes</span>
+                    {% else %}
+                        <span class="badge bg-warning">No</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <a href="{{ url_for('edit_activity', id=activity.id) }}" class="btn btn-warning btn-sm">Edit</a>
+                    
+                    {% if topic.weight_or_percentage %}
+                        <a href="{{ url_for('delete_activity_percentage_view', id=activity.id) }}" class="btn btn-danger btn-sm">Delete</a>
+                    {% else %}
+                        <form method="POST" action="{{ url_for('delete_activity_direct', id=activity.id) }}" style="display: inline;">
+                            <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                        </form>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        {% else %}
+            <tr>
+                <td colspan="4" class="text-center">No activities found for this topic. Create one!</td>
+            </tr>
+        {% endif %}
+    </tbody>
+</table>
+{% endblock %}

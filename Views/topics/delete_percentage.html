@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}Reorganize Percentages{% endblock %}
+
+{% block content %}
+<h1>Delete Topic: {{ topic.name }}</h1>
+
+<p class="text-danger">You are about to delete the topic <strong>{{ topic.name }}</strong>. To proceed, please redistribute the percentages among the remaining topics so that the total equals 100%.</p>
+
+<form method="POST" onsubmit="return validatePercentages()" style="max-width: 500px; margin: auto; padding: 20px; border: 1px solid #ccc; border-radius: 8px;">
+  <h4>Redistribute Percentages:</h4>
+  <ul style="list-style-type: none; padding-left: 0;">
+    {% for t in topics %}
+      <li style="margin-bottom: 15px;">
+        <strong>{{ t.name }}:</strong>
+        <input type="number" name="percentages_{{ t.id }}" value="{{ t.weight }}" step="1" min="1" max="100" required style="width: 80px;"> %
+      </li>
+    {% endfor %}
+  </ul>
+
+  <p style="color: gray;">Total must be exactly 100%</p>
+
+  <div style="text-align: center; margin-top: 20px;">
+    <button type="submit" class="btn btn-danger">Confirm Deletion</button>
+    <a href="{{ url_for('list_sections', course_id=section.course_id) }}" class="btn btn-secondary">Cancel</a>
+  </div>
+</form>
+
+<script>
+  function validatePercentages() {
+    const inputs = document.querySelectorAll("input[type='number'][name^='percentages_']");
+    let total = 0;
+
+    inputs.forEach(input => {
+      total += parseInt(input.value) || 0;
+    });
+
+    if (total !== 100) {
+      alert("Total percentage must be exactly 100%. Current total: " + total + "%");
+      return false;
+    }
+
+    return true;
+  }
+</script>
+{% endblock %}

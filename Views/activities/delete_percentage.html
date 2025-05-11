@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Delete Activity{% endblock %}
+{% block content %}
+<h1>Delete Activity: {{ activity.name }}</h1>
+<div class="alert alert-warning">
+  <strong>Warning!</strong> You are about to delete an activity in a topic that uses percentages. 
+  You need to redistribute the percentages among the remaining activities to ensure the total is 100%.
+</div>
+
+<h4>Topic: {{ topic.name }} | Course: {{ course.name }} - Section {{ section.number }}</h4>
+
+<p>Current activity to delete: <strong>{{ activity.name }}</strong> ({{ activity.weight }}%)</p>
+
+<form method="POST" onsubmit="return validateForm()">
+  <h3>Redistribute percentages:</h3>
+  <p>Please adjust the percentages for the remaining activities so that they total 100%:</p>
+  
+  {% if activities|length > 0 %}
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Activity</th>
+        <th>Current Percentage</th>
+        <th>New Percentage</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for act in activities %}
+      <tr>
+        <td>{{ act.name }}</td>
+        <td>{{ act.weight }}%</td>
+        <td>
+          <input type="number" name="percentages_{{ act.id }}" value="{{ act.weight }}" 
+                 min="1" max="100" step="1" required class="form-control">
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  
+  <div class="form-group">
+    <p style="color: gray;">Total must be exactly 100%</p>
+  </div>
+  
+  <div class="form-group">
+    <a href="{{ url_for('list_activities', topic_id=topic.id) }}" class="btn btn-secondary">Cancel</a>
+    <button type="submit" class="btn btn-danger">Delete Activity and Redistribute</button>
+  </div>
+  {% else %}
+  <div class="alert alert-danger">
+    There are no other activities to redistribute percentages to. You cannot delete the last activity in a percentage-based topic unless you change the topic format to weight-based first.
+  </div>
+  <div class="form-group">
+    <a href="{{ url_for('list_activities', topic_id=topic.id) }}" class="btn btn-secondary">Back to Activities</a>
+    <a href="{{ url_for('edit_topic', id=topic.id) }}" class="btn btn-primary">Edit Topic Format</a>
+  </div>
+  {% endif %}
+</form>
+
+<script>
+function validateForm() {
+  const inputs = document.querySelectorAll("input[type='number'][name^='percentages_']");
+  let total = 0;
+  inputs.forEach(input => {
+    total += parseInt(input.value) || 0;
+  });
+  if (total !== 100) {
+    alert("Total percentage must be exactly 100%. Current total: " + total + "%");
+    return false;
+  }
+  return true;
+}
+</script>
+{% endblock %}
