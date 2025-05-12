@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+
+{% block title %}Create Instance for {{ course.name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Create New Instance</h4>
+                </div>
+                <div class="card-body">
+                    <h5 class="mb-3">Course: {{ course.name }} (NRC: {{ course.nrc }})</h5>
+                    
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ category }}">{{ message }}</div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+                    
+                    <form method="POST" class="needs-validation" novalidate onsubmit="return validateForm()">
+                        <div class="mb-3">
+                            <label class="form-label">Period</label>
+                            <div class="row">
+                                <div class="col-md-6 mb-2 mb-md-0">
+                                    <label for="year" class="form-label">Year</label>
+                                    <input type="number" 
+                                           class="form-control" 
+                                           id="year" 
+                                           name="year" 
+                                           min="1990" 
+                                           max="2050" 
+                                           value="2025" 
+                                           required>
+                                    <div class="invalid-feedback">
+                                        Please enter a valid year (1990-2050).
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="semester" class="form-label">Semester</label>
+                                    <select class="form-select" id="semester" name="semester" required>
+                                        <option value="" disabled selected>Select semester</option>
+                                        <option value="1">1 (Fall)</option>
+                                        <option value="2">2 (Spring)</option>
+                                    </select>
+                                    <div class="invalid-feedback">
+                                        Please select a semester.
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-text mt-2">
+                                The period will be formatted as YYYY-N (e.g., 2025-1 for Fall 2025, 2025-2 for Spring 2025).
+                                <br>
+                                <strong>Note:</strong> Only one instance per period can exist for each course.
+                            </div>
+                            
+                            <input type="hidden" id="period" name="period" value="">
+                        </div>
+                        
+                        <div class="mt-4">
+                            <h6>Existing Instances for this Course:</h6>
+                            {% if periods %}
+                                <ul class="list-group mb-3">
+                                    {% for period in periods %}
+                                        <li class="list-group-item">
+                                            Period: {{ period }}
+                                            {% if period.endswith('-1') %}
+                                                (Fall)
+                                            {% elif period.endswith('-2') %}
+                                                (Spring)
+                                            {% endif %}
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            {% else %}
+                                <p class="text-muted">No instances created yet.</p>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{{ url_for('list_instances', course_id=course.id) }}" class="btn btn-secondary me-md-2">
+                                <i class="bi bi-x-circle"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-save"></i> Create Instance
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function() {
+        'use strict'
+        const forms = document.querySelectorAll('.needs-validation')
+        Array.from(forms).forEach(function(form) {
+            form.addEventListener('submit', function(event) {
+                if (!form.checkValidity()) {
+                    event.preventDefault()
+                    event.stopPropagation()
+                }
+                form.classList.add('was-validated')
+            }, false)
+        })
+    })()
+    
+    function validateForm() {
+        const yearInput = document.getElementById('year');
+        const semesterInput = document.getElementById('semester');
+        const periodInput = document.getElementById('period');
+        
+        const year = parseInt(yearInput.value);
+        if (isNaN(year) || year < 1990 || year > 2050) {
+            yearInput.setCustomValidity('Please enter a valid year between 1990 and 2050');
+            return false;
+        } else {
+            yearInput.setCustomValidity('');
+        }
+        
+        const semester = semesterInput.value;
+        if (semester !== '1' && semester !== '2') {
+            semesterInput.setCustomValidity('Please select a valid semester (1 or 2)');
+            return false;
+        } else {
+            semesterInput.setCustomValidity('');
+        }
+        
+        const newPeriod = year + '-' + semester;
+        periodInput.value = newPeriod;
+        
+        const existingPeriodsElements = document.querySelectorAll('.list-group-item');
+        let periodExists = false;
+        
+        existingPeriodsElements.forEach(element => {
+            const periodText = element.textContent.trim();
+            if (periodText.includes(newPeriod)) {
+                periodExists = true;
+            }
+        });
+        
+        if (periodExists) {
+            alert(`An instance for period ${newPeriod} already exists for this course. Please select a different period.`);
+            return false;
+        }
+        
+        return true;
+    }
+</script>
+{% endblock %}

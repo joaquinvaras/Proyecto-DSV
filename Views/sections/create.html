@@ -1,39 +1,51 @@
 {% extends "base.html" %}
-
 {% block title %}Create Section{% endblock %}
-
 {% block content %}
-<h2>Create Section for {{ course.name }} (NRC: {{ course.nrc }})</h2>
-
-<form method="post">
-    <div class="form-group">
-        <label for="period">Period</label>
-        <input type="text" class="form-control" name="period" id="period" required>
+<div class="container mt-4">
+  <h2>Create Section for {{ course.name }} - Period: {{ instance.period }}</h2>
+  
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ category }}">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+  
+  <div class="card">
+    <div class="card-header bg-light">
+      <strong>Section Information</strong>
     </div>
-
-    <div class="form-group">
-        <label for="number">Section Number</label>
-        <input type="text" class="form-control" name="number" id="number" required>
-    </div>
-
-    <div class="form-group">
-        <label for="professor_id">Professor</label>
-        <select class="form-control" name="professor_id" id="professor_id" required>
+    <div class="card-body">
+      <form method="post">
+        <div class="form-group mb-3">
+          <label for="number">Section Number</label>
+          <input type="text" class="form-control" name="number" id="number" required>
+          <small class="form-text text-muted">The section number must be unique for this instance.</small>
+        </div>
+        
+        <div class="form-group mb-3">
+          <label for="professor_id">Professor</label>
+          <select class="form-control" name="professor_id" id="professor_id" required>
             {% for professor in professors %}
-            <option value="{{ professor.id }}">{{ professor.name }} ({{ professor.email }})</option>
+              <option value="{{ professor.id }}">{{ professor.name }} ({{ professor.email }})</option>
             {% endfor %}
-        </select>
-    </div>
-
-    <div class="form-check mt-3 mb-3">
-        <input class="form-check-input" type="checkbox" name="weight_or_percentage" id="weight_or_percentage">
-        <label class="form-check-label" for="weight_or_percentage">
+          </select>
+        </div>
+        
+        <div class="form-check mt-3 mb-3">
+          <input class="form-check-input" type="checkbox" name="weight_or_percentage" id="weight_or_percentage">
+          <label class="form-check-label" for="weight_or_percentage">
             Use Percentage? (unmark means weights system)
-        </label>
+          </label>
+        </div>
+        
+        <div class="mt-4">
+          <button type="submit" class="btn btn-success">Create</button>
+          <a href="{{ url_for('list_sections', instance_id=instance.id) }}" class="btn btn-secondary">Cancel</a>
+        </div>
+      </form>
     </div>
-
-    <button type="submit" class="btn btn-success">Create</button>
-    <a href="{{ url_for('list_sections', course_id=course.id) }}" class="btn btn-secondary">Cancel</a>
-</form>
+  </div>
+</div>
 {% endblock %}
-

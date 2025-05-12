@@ -75,31 +75,34 @@ def delete_course(id):
 
 # ---------------- TOPICS ----------------
 
-@app.route('/courses/<int:course_id>/sections/<int:section_id>/topics')
-def list_topics(course_id, section_id):
+@app.route('/instances/<int:instance_id>/sections/<int:section_id>/topics')
+def list_topics(instance_id, section_id):
     topics = topic_service.get_by_section_id(section_id)
     section = section_service.get_by_id(section_id)
     
-    # Get instance and course info through the section
+    if section['instance_id'] != instance_id:
+        return "Invalid instance ID for this section", 400
+    
     instance = instance_service.get_by_id(section['instance_id'])
     course = course_service.get_by_id(instance['course_id'])
     
-    # Set needed info for template
     section['course_id'] = course['id']
     section['course_name'] = course['name']
     section['period'] = instance['period']
     
-    return render_template('topics/list.html', topics=topics, section=section)
+    return render_template('topics/list.html', topics=topics, section=section, instance=instance)
 
-@app.route('/courses/<int:course_id>/sections/<int:section_id>/topics/create', methods=['GET', 'POST'], endpoint='create_topic')
-def create_topic(course_id, section_id):
+@app.route('/instances/<int:instance_id>/sections/<int:section_id>/topics/create', methods=['GET', 'POST'], endpoint='create_topic')
+def create_topic(instance_id, section_id):
     section = section_service.get_by_id(section_id)
+    
+    if section['instance_id'] != instance_id:
+        return "Invalid instance ID for this section", 400
+    
     topics = topic_service.get_by_section_id(section_id)
     
     instance = instance_service.get_by_id(section['instance_id'])
-    
-    if instance['course_id'] != course_id:
-        return "Invalid course ID for this section", 400
+    course = course_service.get_by_id(instance['course_id'])
 
     if request.method == 'POST':
         name = request.form['name']
@@ -108,10 +111,11 @@ def create_topic(course_id, section_id):
         try:
             weight = int(request.form['weight'])  
         except (KeyError, ValueError):
-            flash("Invalid value for weight/percentage")
-            return redirect(url_for('create_topic', course_id=course_id, section_id=section_id))
+            flash("Invalid value for weight/percentage", "danger")
+            return redirect(url_for('create_topic', instance_id=instance_id, section_id=section_id))
             
         topic_service.create(name, section_id, weight, weight_or_percentage)
+        flash(f"Topic '{name}' created successfully.", "success")
 
         if section['weight_or_percentage']:
             for topic in topics:
@@ -121,12 +125,18 @@ def create_topic(course_id, section_id):
                         updated_weight = int(request.form[key])
                         topic_service.update(topic['id'], topic['name'], updated_weight, topic['weight_or_percentage'])
                     except ValueError:
-                        flash(f"Invalid percentage for topic '{topic['name']}'")
-                        return redirect(url_for('create_topic', course_id=course_id, section_id=section_id))
+                        flash(f"Invalid percentage for topic '{topic['name']}'", "danger")
+                        return redirect(url_for('create_topic', instance_id=instance_id, section_id=section_id))
 
-        return redirect(url_for('list_sections', course_id=course_id))
+        return redirect(url_for('list_sections', instance_id=instance_id))
 
-    return render_template('topics/create.html', course_id=course_id, section_id=section_id, section=section, topics=topics)
+    return render_template('topics/create.html', 
+                          instance_id=instance_id, 
+                          section_id=section_id, 
+                          section=section, 
+                          topics=topics,
+                          course=course,
+                          instance=instance)
 
 @app.route('/topics/edit/<int:id>', methods=['GET', 'POST'])
 def edit_topic(id):
@@ -138,34 +148,42 @@ def edit_topic(id):
     topics = topic_service.get_by_section_id(section['id'])
     
     instance = instance_service.get_by_id(section['instance_id'])
-    course_id = instance['course_id']
+    course = course_service.get_by_id(instance['course_id'])
 
     if request.method == 'POST':
         name = request.form['name']
-        weight = int(request.form['weight'])
-        weight_or_percentage = 'weight_or_percentage' in request.form
-        topic_service.update(id, name, weight, weight_or_percentage)
+        try:
+            weight = int(request.form['weight'])
+            weight_or_percentage = 'weight_or_percentage' in request.form
+            topic_service.update(id, name, weight, weight_or_percentage)
+            
+            flash(f"Topic '{name}' updated successfully.", "success")
 
-        if section['weight_or_percentage']:
-            for t in topics:
-                if t['id'] == topic['id']:
-                    continue  
-                key = f'percentages_{t["id"]}'
-                if key in request.form:
-                    try:
-                        updated_weight = int(request.form[key])
-                        topic_service.update(t['id'], t['name'], updated_weight, t['weight_or_percentage'])
-                    except ValueError:
-                        flash(f"Invalid percentage for topic '{t['name']}'")
-                        return redirect(url_for('edit_topic', id=id))
+            if section['weight_or_percentage']:
+                for t in topics:
+                    if t['id'] == topic['id']:
+                        continue  
+                    key = f'percentages_{t["id"]}'
+                    if key in request.form:
+                        try:
+                            updated_weight = int(request.form[key])
+                            topic_service.update(t['id'], t['name'], updated_weight, t['weight_or_percentage'])
+                        except ValueError:
+                            flash(f"Invalid percentage for topic '{t['name']}'", "danger")
+                            return redirect(url_for('edit_topic', id=id))
+        except ValueError:
+            flash("Invalid weight value. Please enter a valid number.", "danger")
+            return redirect(url_for('edit_topic', id=id))
 
-        return redirect(url_for('list_sections', course_id=course_id))
+        return redirect(url_for('list_sections', instance_id=section['instance_id']))
 
     return render_template(
         'topics/edit.html',
         topic=topic,
         section=section,
-        topics=topics
+        topics=topics,
+        course=course,
+        instance=instance
     )
 
 @app.post('/topics/delete/<int:id>')
@@ -176,10 +194,12 @@ def delete_topic_direct(id):
 
     section = section_service.get_by_id(topic['section_id'])
     instance = instance_service.get_by_id(section['instance_id'])
-    course_id = instance['course_id']
     
+    topic_name = topic['name']
     topic_service.delete(id)
-    return redirect(url_for('list_sections', course_id=course_id))
+    flash(f"Topic '{topic_name}' deleted successfully.", "success")
+    
+    return redirect(url_for('list_sections', instance_id=instance['id']))
 
 @app.route('/topics/delete/percentage/<int:id>', methods=['GET', 'POST'])
 def delete_topic_percentage_view(id):
@@ -192,7 +212,7 @@ def delete_topic_percentage_view(id):
     remaining_topics = [t for t in topics if t['id'] != id]
     
     instance = instance_service.get_by_id(section['instance_id'])
-    course_id = instance['course_id']
+    course = course_service.get_by_id(instance['course_id'])
 
     if request.method == 'POST':
         try:
@@ -200,19 +220,23 @@ def delete_topic_percentage_view(id):
                 new_weight = int(request.form[f'percentages_{t["id"]}'])
                 topic_service.update(t['id'], t['name'], new_weight, t['weight_or_percentage'])
 
+            topic_name = topic['name']
             topic_service.delete(id)
-            return redirect(url_for('list_sections', course_id=course_id))
+            flash(f"Topic '{topic_name}' deleted successfully and percentages redistributed.", "success")
+            
+            return redirect(url_for('list_sections', instance_id=instance['id']))
         except ValueError:
-            flash("Invalid input. All percentages must be numbers.")
+            flash("Invalid input. All percentages must be numbers.", "danger")
             return redirect(request.url)
 
     return render_template(
         'topics/delete_percentage.html',
         topic=topic,
         section=section,
-        topics=remaining_topics
+        topics=remaining_topics,
+        course=course,
+        instance=instance
     )
-
 # ---------------- INSTANCES ----------------
 
 @app.route('/courses/<int:course_id>/instances')
@@ -332,7 +356,16 @@ def create_section(instance_id):
         professor_id = request.form['professor_id']
         weight_or_percentage = 'weight_or_percentage' in request.form
         
+        if section_service.section_number_exists(instance_id, number):
+            flash(f"Section number {number} already exists for this instance.", "danger")
+            professors = user_service.get_all(is_professor=True)
+            return render_template('sections/create.html', 
+                                 course=course, 
+                                 instance=instance,
+                                 professors=professors)
+        
         section_service.create(instance_id, number, professor_id, weight_or_percentage)
+        flash(f"Section {number} created successfully.", "success")
         return redirect(url_for('list_sections', instance_id=instance_id))
     
     professors = user_service.get_all(is_professor=True)
@@ -362,7 +395,16 @@ def edit_section(section_id):
         professor_id = request.form['professor_id']
         weight_or_percentage = 'weight_or_percentage' in request.form
         
+        if section_service.section_number_exists(instance_id, number, exclude_section_id=section_id):
+            flash(f"Section number {number} already exists for this instance.", "danger")
+            return render_template('sections/edit.html', 
+                                 section=section, 
+                                 course=course,
+                                 instance=instance,
+                                 professors=professors)
+        
         section_service.update(section_id, number, professor_id, weight_or_percentage)
+        flash(f"Section {number} updated successfully.", "success")
         return redirect(url_for('list_sections', instance_id=instance_id))
     
     return render_template('sections/edit.html', 
@@ -381,6 +423,7 @@ def delete_section(section_id):
     return "Section not found", 404
 
 # ---------------- ENROLLMENT ----------------
+
 @app.route('/sections/<int:section_id>/enroll', methods=['POST'])
 def enroll_student_in_section(section_id):
     user_id = request.form['user_id']
@@ -392,9 +435,15 @@ def enroll_student_in_section(section_id):
     instance = instance_service.get_by_id(section['instance_id'])
     course_id = instance['course_id']
     
-    course_taken_service.enroll_student(user_id, course_id, section_id)
+
+    if course_taken_service.is_student_enrolled(user_id, section_id):
+        flash(f"Student is already enrolled in this section.")
+        return redirect(url_for('list_students_in_section', section_id=section_id))
     
-    return redirect(url_for('list_sections', instance_id=section['instance_id']))
+    course_taken_service.enroll_student(user_id, course_id, section_id)
+    flash(f"Student enrolled successfully.")
+    
+    return redirect(url_for('list_students_in_section', section_id=section_id))
 
 @app.route('/sections/<int:section_id>/unenroll/<int:user_id>', methods=['POST'])
 def unenroll_student_from_section(section_id, user_id):
@@ -406,6 +455,7 @@ def unenroll_student_from_section(section_id, user_id):
     course_id = instance['course_id']
     
     course_taken_service.unenroll_student(course_id, section_id, user_id)
+    flash(f"Student unenrolled successfully.")
     
     return redirect(url_for('list_students_in_section', section_id=section_id))
 
@@ -419,12 +469,18 @@ def list_students_in_section(section_id):
     course = course_service.get_by_id(instance['course_id'])
     
     enrollments = course_taken_service.get_students_by_section(section_id)
+
+    enrolled_student_ids = [str(enrollment['user_id']) for enrollment in enrollments]
+    
+    students = user_service.get_all(is_professor=False)
     
     return render_template('sections/students_in_section.html',
                           course=course, 
                           section=section, 
                           instance=instance,
-                          enrollments=enrollments)
+                          enrollments=enrollments,
+                          students=students,
+                          enrolled_student_ids=enrolled_student_ids)
 
 # ---------------- ACTIVITIES ----------------
 

@@ -63,6 +63,23 @@ class SectionService:
         """, (course_id, period))
         return cursor.fetchall()
     
+    def section_number_exists(self, instance_id, number, exclude_section_id=None):
+        cursor = self.db.connect()
+        
+        if exclude_section_id:
+            cursor.execute(
+                "SELECT COUNT(*) as count FROM Sections WHERE instance_id = %s AND number = %s AND id != %s",
+                (instance_id, number, exclude_section_id)
+            )
+        else:
+            cursor.execute(
+                "SELECT COUNT(*) as count FROM Sections WHERE instance_id = %s AND number = %s",
+                (instance_id, number)
+            )
+            
+        result = cursor.fetchone()
+        return result['count'] > 0
+    
     def create(self, instance_id, number, professor_id, weight_or_percentage):
         cursor = self.db.connect()
         cursor.execute(
