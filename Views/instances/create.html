@@ -61,10 +61,10 @@
                         </div>
                         
                         <div class="mt-4">
-                            <h6>Existing Instances for this Course:</h6>
-                            {% if periods %}
-                                <ul class="list-group mb-3">
-                                    {% for period in periods %}
+                            <h6>Existing Instances for {{ course.name }}:</h6>
+                            {% if course_periods %}
+                                <ul class="list-group mb-3" id="existingPeriods">
+                                    {% for period in course_periods %}
                                         <li class="list-group-item">
                                             Period: {{ period }}
                                             {% if period.endswith('-1') %}
@@ -76,7 +76,7 @@
                                     {% endfor %}
                                 </ul>
                             {% else %}
-                                <p class="text-muted">No instances created yet.</p>
+                                <p class="text-muted">No instances created yet for this course.</p>
                             {% endif %}
                         </div>
                         
@@ -134,7 +134,7 @@
         const newPeriod = year + '-' + semester;
         periodInput.value = newPeriod;
         
-        const existingPeriodsElements = document.querySelectorAll('.list-group-item');
+        const existingPeriodsElements = document.querySelectorAll('#existingPeriods .list-group-item');
         let periodExists = false;
         
         existingPeriodsElements.forEach(element => {

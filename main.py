@@ -269,9 +269,12 @@ def create_instance(course_id):
         flash(f"Instance created for course {course['name']} in period {period}.")
         return redirect(url_for('list_instances', course_id=course_id))
     
-    periods = instance_service.get_periods()
-    
-    return render_template('instances/create.html', course=course, periods=periods)
+    instances = instance_service.get_by_course_id(course_id)
+    course_periods = [instance['period'] for instance in instances]
+
+    return render_template('instances/create.html', 
+                        course=course, 
+                        course_periods=course_periods)
 
 @app.route('/instances/<int:instance_id>/edit', methods=['GET', 'POST'])
 def edit_instance(instance_id):
