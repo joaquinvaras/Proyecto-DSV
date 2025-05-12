@@ -1,25 +1,36 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>{% block title %}SGA{% endblock %}</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+  <meta charset="UTF-8">
+  <title>{% block title %}SGA{% endblock %}</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark px-4">
-        <a class="navbar-brand" href="/">SGA</a>
-        <div class="collapse navbar-collapse">
-            <ul class="navbar-nav">
-                <li class="nav-item"><a class="nav-link" href="/courses">Courses</a></li>
-                <li class="nav-item"><a class="nav-link" href="/professors">Professors</a></li>
-                <li class="nav-item"><a class="nav-link" href="/students">Students</a></li>
-                <li class="nav-item"><a class="nav-link" href="/import">DataUpload</a></li>
-            </ul>
-        </div>
-    </nav>
-    
-    <div class="container mt-4">
-        {% block content %}{% endblock %}
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark px-4">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="/">SGA</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain" aria-controls="navbarMain" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarMain">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+          <li class="nav-item"><a class="nav-link" href="/courses">Courses</a></li>
+          <li class="nav-item"><a class="nav-link" href="/professors">Professors</a></li>
+          <li class="nav-item"><a class="nav-link" href="/students">Students</a></li>
+          <li class="nav-item"><a class="nav-link" href="/schedule">
+            <i class="bi bi-calendar3"></i> Schedule
+          </a></li>
+          <li class="nav-item"><a class="nav-link" href="/import">
+            <i class="bi bi-upload"></i> Data Upload
+          </a></li>
+        </ul>
+      </div>
     </div>
+  </nav>
+  <div class="container mt-4">
+    {% block content %}{% endblock %}
+  </div>
 </body>
 </html>

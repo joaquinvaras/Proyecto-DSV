@@ -1,13 +1,16 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, make_response
+import io
 from Service.course_service import CourseService
 from Service.user_service import UserService
 from Service.section_service import SectionService
 from Service.course_taken_service import CourseTakenService
 from Service.topic_service import TopicService
 from Service.activity_service import ActivityService
-from Service.Import_service import ImportService
+from Service.import_service import ImportService
 from Service.instance_service import InstanceService
 from Service.room_service import RoomService
+from Service.grade_service import GradeService
+from Service.schedule_service import ScheduleService
 
 
 app = Flask(__name__, template_folder='Views')
@@ -22,6 +25,8 @@ activity_service = ActivityService()
 import_service = ImportService()
 instance_service = InstanceService()
 room_service = RoomService()
+grade_service = GradeService()
+schedule_service = ScheduleService()
 
 @app.route('/')
 def index():
@@ -75,31 +80,34 @@ def delete_course(id):
 
 # ---------------- TOPICS ----------------
 
-@app.route('/courses/<int:course_id>/sections/<int:section_id>/topics')
-def list_topics(course_id, section_id):
+@app.route('/instances/<int:instance_id>/sections/<int:section_id>/topics')
+def list_topics(instance_id, section_id):
     topics = topic_service.get_by_section_id(section_id)
     section = section_service.get_by_id(section_id)
     
-    # Get instance and course info through the section
+    if section['instance_id'] != instance_id:
+        return "Invalid instance ID for this section", 400
+    
     instance = instance_service.get_by_id(section['instance_id'])
     course = course_service.get_by_id(instance['course_id'])
     
-    # Set needed info for template
     section['course_id'] = course['id']
     section['course_name'] = course['name']
     section['period'] = instance['period']
     
-    return render_template('topics/list.html', topics=topics, section=section)
+    return render_template('topics/list.html', topics=topics, section=section, instance=instance)
 
-@app.route('/courses/<int:course_id>/sections/<int:section_id>/topics/create', methods=['GET', 'POST'], endpoint='create_topic')
-def create_topic(course_id, section_id):
+@app.route('/instances/<int:instance_id>/sections/<int:section_id>/topics/create', methods=['GET', 'POST'], endpoint='create_topic')
+def create_topic(instance_id, section_id):
     section = section_service.get_by_id(section_id)
+    
+    if section['instance_id'] != instance_id:
+        return "Invalid instance ID for this section", 400
+    
     topics = topic_service.get_by_section_id(section_id)
     
     instance = instance_service.get_by_id(section['instance_id'])
-    
-    if instance['course_id'] != course_id:
-        return "Invalid course ID for this section", 400
+    course = course_service.get_by_id(instance['course_id'])
 
     if request.method == 'POST':
         name = request.form['name']
@@ -108,10 +116,11 @@ def create_topic(course_id, section_id):
         try:
             weight = int(request.form['weight'])  
         except (KeyError, ValueError):
-            flash("Invalid value for weight/percentage")
-            return redirect(url_for('create_topic', course_id=course_id, section_id=section_id))
+            flash("Invalid value for weight/percentage", "danger")
+            return redirect(url_for('create_topic', instance_id=instance_id, section_id=section_id))
             
         topic_service.create(name, section_id, weight, weight_or_percentage)
+        flash(f"Topic '{name}' created successfully.", "success")
 
         if section['weight_or_percentage']:
             for topic in topics:
@@ -121,12 +130,18 @@ def create_topic(course_id, section_id):
                         updated_weight = int(request.form[key])
                         topic_service.update(topic['id'], topic['name'], updated_weight, topic['weight_or_percentage'])
                     except ValueError:
-                        flash(f"Invalid percentage for topic '{topic['name']}'")
-                        return redirect(url_for('create_topic', course_id=course_id, section_id=section_id))
+                        flash(f"Invalid percentage for topic '{topic['name']}'", "danger")
+                        return redirect(url_for('create_topic', instance_id=instance_id, section_id=section_id))
 
-        return redirect(url_for('list_sections', course_id=course_id))
+        return redirect(url_for('list_sections', instance_id=instance_id))
 
-    return render_template('topics/create.html', course_id=course_id, section_id=section_id, section=section, topics=topics)
+    return render_template('topics/create.html', 
+                          instance_id=instance_id, 
+                          section_id=section_id, 
+                          section=section, 
+                          topics=topics,
+                          course=course,
+                          instance=instance)
 
 @app.route('/topics/edit/<int:id>', methods=['GET', 'POST'])
 def edit_topic(id):
@@ -138,34 +153,42 @@ def edit_topic(id):
     topics = topic_service.get_by_section_id(section['id'])
     
     instance = instance_service.get_by_id(section['instance_id'])
-    course_id = instance['course_id']
+    course = course_service.get_by_id(instance['course_id'])
 
     if request.method == 'POST':
         name = request.form['name']
-        weight = int(request.form['weight'])
-        weight_or_percentage = 'weight_or_percentage' in request.form
-        topic_service.update(id, name, weight, weight_or_percentage)
+        try:
+            weight = int(request.form['weight'])
+            weight_or_percentage = 'weight_or_percentage' in request.form
+            topic_service.update(id, name, weight, weight_or_percentage)
+            
+            flash(f"Topic '{name}' updated successfully.", "success")
 
-        if section['weight_or_percentage']:
-            for t in topics:
-                if t['id'] == topic['id']:
-                    continue  
-                key = f'percentages_{t["id"]}'
-                if key in request.form:
-                    try:
-                        updated_weight = int(request.form[key])
-                        topic_service.update(t['id'], t['name'], updated_weight, t['weight_or_percentage'])
-                    except ValueError:
-                        flash(f"Invalid percentage for topic '{t['name']}'")
-                        return redirect(url_for('edit_topic', id=id))
+            if section['weight_or_percentage']:
+                for t in topics:
+                    if t['id'] == topic['id']:
+                        continue  
+                    key = f'percentages_{t["id"]}'
+                    if key in request.form:
+                        try:
+                            updated_weight = int(request.form[key])
+                            topic_service.update(t['id'], t['name'], updated_weight, t['weight_or_percentage'])
+                        except ValueError:
+                            flash(f"Invalid percentage for topic '{t['name']}'", "danger")
+                            return redirect(url_for('edit_topic', id=id))
+        except ValueError:
+            flash("Invalid weight value. Please enter a valid number.", "danger")
+            return redirect(url_for('edit_topic', id=id))
 
-        return redirect(url_for('list_sections', course_id=course_id))
+        return redirect(url_for('list_sections', instance_id=section['instance_id']))
 
     return render_template(
         'topics/edit.html',
         topic=topic,
         section=section,
-        topics=topics
+        topics=topics,
+        course=course,
+        instance=instance
     )
 
 @app.post('/topics/delete/<int:id>')
@@ -176,10 +199,12 @@ def delete_topic_direct(id):
 
     section = section_service.get_by_id(topic['section_id'])
     instance = instance_service.get_by_id(section['instance_id'])
-    course_id = instance['course_id']
     
+    topic_name = topic['name']
     topic_service.delete(id)
-    return redirect(url_for('list_sections', course_id=course_id))
+    flash(f"Topic '{topic_name}' deleted successfully.", "success")
+    
+    return redirect(url_for('list_sections', instance_id=instance['id']))
 
 @app.route('/topics/delete/percentage/<int:id>', methods=['GET', 'POST'])
 def delete_topic_percentage_view(id):
@@ -192,7 +217,7 @@ def delete_topic_percentage_view(id):
     remaining_topics = [t for t in topics if t['id'] != id]
     
     instance = instance_service.get_by_id(section['instance_id'])
-    course_id = instance['course_id']
+    course = course_service.get_by_id(instance['course_id'])
 
     if request.method == 'POST':
         try:
@@ -200,19 +225,23 @@ def delete_topic_percentage_view(id):
                 new_weight = int(request.form[f'percentages_{t["id"]}'])
                 topic_service.update(t['id'], t['name'], new_weight, t['weight_or_percentage'])
 
+            topic_name = topic['name']
             topic_service.delete(id)
-            return redirect(url_for('list_sections', course_id=course_id))
+            flash(f"Topic '{topic_name}' deleted successfully and percentages redistributed.", "success")
+            
+            return redirect(url_for('list_sections', instance_id=instance['id']))
         except ValueError:
-            flash("Invalid input. All percentages must be numbers.")
+            flash("Invalid input. All percentages must be numbers.", "danger")
             return redirect(request.url)
 
     return render_template(
         'topics/delete_percentage.html',
         topic=topic,
         section=section,
-        topics=remaining_topics
+        topics=remaining_topics,
+        course=course,
+        instance=instance
     )
-
 # ---------------- INSTANCES ----------------
 
 @app.route('/courses/<int:course_id>/instances')
@@ -243,9 +272,12 @@ def create_instance(course_id):
         flash(f"Instance created for course {course['name']} in period {period}.")
         return redirect(url_for('list_instances', course_id=course_id))
     
-    periods = instance_service.get_periods()
-    
-    return render_template('instances/create.html', course=course, periods=periods)
+    instances = instance_service.get_by_course_id(course_id)
+    course_periods = [instance['period'] for instance in instances]
+
+    return render_template('instances/create.html', 
+                        course=course, 
+                        course_periods=course_periods)
 
 @app.route('/instances/<int:instance_id>/edit', methods=['GET', 'POST'])
 def edit_instance(instance_id):
@@ -332,7 +364,16 @@ def create_section(instance_id):
         professor_id = request.form['professor_id']
         weight_or_percentage = 'weight_or_percentage' in request.form
         
+        if section_service.section_number_exists(instance_id, number):
+            flash(f"Section number {number} already exists for this instance.", "danger")
+            professors = user_service.get_all(is_professor=True)
+            return render_template('sections/create.html', 
+                                 course=course, 
+                                 instance=instance,
+                                 professors=professors)
+        
         section_service.create(instance_id, number, professor_id, weight_or_percentage)
+        flash(f"Section {number} created successfully.", "success")
         return redirect(url_for('list_sections', instance_id=instance_id))
     
     professors = user_service.get_all(is_professor=True)
@@ -362,7 +403,16 @@ def edit_section(section_id):
         professor_id = request.form['professor_id']
         weight_or_percentage = 'weight_or_percentage' in request.form
         
+        if section_service.section_number_exists(instance_id, number, exclude_section_id=section_id):
+            flash(f"Section number {number} already exists for this instance.", "danger")
+            return render_template('sections/edit.html', 
+                                 section=section, 
+                                 course=course,
+                                 instance=instance,
+                                 professors=professors)
+        
         section_service.update(section_id, number, professor_id, weight_or_percentage)
+        flash(f"Section {number} updated successfully.", "success")
         return redirect(url_for('list_sections', instance_id=instance_id))
     
     return render_template('sections/edit.html', 
@@ -380,7 +430,135 @@ def delete_section(section_id):
         return redirect(url_for('list_sections', instance_id=instance_id))
     return "Section not found", 404
 
+@app.route('/sections/<int:section_id>/students/<int:user_id>/calculate_grade')
+def calculate_student_grade(section_id, user_id):
+    section = section_service.get_by_id(section_id)
+    if not section:
+        return "Section not found", 404
+        
+    student = user_service.get_by_id(user_id)
+    if not student:
+        return "Student not found", 404
+        
+    instance = instance_service.get_by_id(section['instance_id'])
+    course = course_service.get_by_id(instance['course_id'])
+    
+    topics = topic_service.get_by_section_id(section_id)
+    
+    topic_calculations = []
+    final_grade = 0
+    total_weight = 0
+    
+    for topic in topics:
+        topic_calculation = {
+            'topic': topic,
+            'activities': [],
+            'grade': 0,
+            'total_weight': 0,
+            'missing_percentage': 0,
+            'final_contribution': 0
+        }
+        
+        activities = activity_service.get_by_topic_id(topic['id'])
+        
+        topic_grade = 0
+        topic_total_weight = 0
+        missing_percentage = 0
+        
+        for activity in activities:
+            grade = grade_service.get_by_activity_and_student(activity['id'], user_id)
+            
+            activity_calculation = {
+                'activity': activity,
+                'grade': None,
+                'contribution': 0
+            }
+            
+            if grade:
+                activity_calculation['grade'] = float(grade['grade'])
+                grade_value = float(grade['grade'])
+            elif activity['optional_flag']:
+                topic_calculation['activities'].append(activity_calculation)
+                continue
+            else:
+                activity_calculation['grade'] = 1.0
+                grade_value = 1.0
+            
+            if topic['weight_or_percentage']:
+                activity_weight = float(activity['weight']) / 10.0
+                contribution = grade_value * (activity_weight / 100.0)
+                topic_grade += contribution
+                topic_total_weight += activity_weight / 100.0
+                activity_calculation['contribution'] = contribution
+            else:
+                contribution = grade_value * float(activity['weight'])
+                topic_grade += contribution
+                topic_total_weight += float(activity['weight'])
+                activity_calculation['contribution'] = contribution
+            
+            topic_calculation['activities'].append(activity_calculation)
+        
+        if topic_total_weight > 0:
+            if topic['weight_or_percentage']:
+                expected_total = 1.0
+                if abs(topic_total_weight - expected_total) > 0.001:
+                    missing_percentage = (expected_total - topic_total_weight) * 100
+                    if missing_percentage > 0:
+                        topic_grade = topic_grade / topic_total_weight
+                    else:
+                        topic_grade = topic_grade / topic_total_weight
+            else:
+                topic_grade = topic_grade / topic_total_weight
+        else:
+            topic_grade = 1.0
+        
+        topic_calculation['grade'] = topic_grade
+        topic_calculation['total_weight'] = topic_total_weight
+        topic_calculation['missing_percentage'] = missing_percentage
+        
+        if section['weight_or_percentage']:
+            topic_weight = float(topic['weight']) / 10.0
+            topic_contribution = topic_grade * (topic_weight / 100.0)
+            final_grade += topic_contribution
+            total_weight += topic_weight / 100.0
+        else:
+            topic_contribution = topic_grade * float(topic['weight'])
+            final_grade += topic_contribution
+            total_weight += float(topic['weight'])
+            
+        topic_calculation['final_contribution'] = topic_contribution
+        topic_calculations.append(topic_calculation)
+    
+    if total_weight > 0:
+        final_grade = final_grade / total_weight
+    else:
+        final_grade = 1.0
+    
+    final_grade = round(final_grade * 10) / 10
+    
+    course_taken_service.update_final_grade(user_id, section_id, final_grade)
+    
+    return render_template(
+        'sections/student_grade_calculation.html',
+        student=student,
+        section=section,
+        instance=instance,
+        course=course,
+        topic_calculations=topic_calculations,
+        final_grade=final_grade,
+        total_weight=total_weight
+    )
+
+@app.route('/sections/<int:section_id>/students/<int:user_id>/recalculate')
+def recalculate_grade(section_id, user_id):
+    final_grade = grade_service.calculate_final_grade(user_id, section_id)
+    course_taken_service.update_final_grade(user_id, section_id, final_grade)
+    
+    flash("Grade has been recalculated successfully", "success")
+    return redirect(url_for('calculate_student_grade', section_id=section_id, user_id=user_id))
+
 # ---------------- ENROLLMENT ----------------
+
 @app.route('/sections/<int:section_id>/enroll', methods=['POST'])
 def enroll_student_in_section(section_id):
     user_id = request.form['user_id']
@@ -392,9 +570,15 @@ def enroll_student_in_section(section_id):
     instance = instance_service.get_by_id(section['instance_id'])
     course_id = instance['course_id']
     
-    course_taken_service.enroll_student(user_id, course_id, section_id)
+
+    if course_taken_service.is_student_enrolled(user_id, section_id):
+        flash(f"Student is already enrolled in this section.")
+        return redirect(url_for('list_students_in_section', section_id=section_id))
     
-    return redirect(url_for('list_sections', instance_id=section['instance_id']))
+    course_taken_service.enroll_student(user_id, course_id, section_id)
+    flash(f"Student enrolled successfully.")
+    
+    return redirect(url_for('list_students_in_section', section_id=section_id))
 
 @app.route('/sections/<int:section_id>/unenroll/<int:user_id>', methods=['POST'])
 def unenroll_student_from_section(section_id, user_id):
@@ -406,6 +590,7 @@ def unenroll_student_from_section(section_id, user_id):
     course_id = instance['course_id']
     
     course_taken_service.unenroll_student(course_id, section_id, user_id)
+    flash(f"Student unenrolled successfully.")
     
     return redirect(url_for('list_students_in_section', section_id=section_id))
 
@@ -419,12 +604,18 @@ def list_students_in_section(section_id):
     course = course_service.get_by_id(instance['course_id'])
     
     enrollments = course_taken_service.get_students_by_section(section_id)
+
+    enrolled_student_ids = [str(enrollment['user_id']) for enrollment in enrollments]
+    
+    students = user_service.get_all(is_professor=False)
     
     return render_template('sections/students_in_section.html',
                           course=course, 
                           section=section, 
                           instance=instance,
-                          enrollments=enrollments)
+                          enrollments=enrollments,
+                          students=students,
+                          enrolled_student_ids=enrolled_student_ids)
 
 # ---------------- ACTIVITIES ----------------
 
@@ -711,7 +902,81 @@ def delete_student(id):
         
     return redirect(url_for('list_students'))
 
+# ---------------- Grades ----------------
 
+@app.route('/activities/<int:activity_id>/evaluate', methods=['GET', 'POST'])
+def evaluate_students(activity_id):
+    activity = activity_service.get_by_id(activity_id)
+    if not activity:
+        return "Activity not found", 404
+    
+    topic = topic_service.get_by_id(activity['topic_id'])
+    section = section_service.get_by_id(topic['section_id'])
+    instance = instance_service.get_by_id(section['instance_id'])
+    course = course_service.get_by_id(instance['course_id'])
+    
+    enrollments = course_taken_service.get_students_by_section(section['id'])
+    students = []
+    
+    for enrollment in enrollments:
+        grade = grade_service.get_by_activity_and_student(activity_id, enrollment['user_id'])
+        
+        student = {
+            'id': enrollment['user_id'],
+            'name': enrollment['user_name'],
+            'email': enrollment['user_email']
+        }
+        
+        if grade:
+            student['grade'] = grade['grade']
+            student['grade_id'] = grade['id']
+        
+        students.append(student)
+    
+    return render_template(
+        'activities/evaluate_students.html',
+        activity=activity,
+        topic=topic,
+        section=section,
+        instance=instance,
+        course=course,
+        students=students
+    )
+
+@app.route('/activities/<int:activity_id>/save_grades', methods=['POST'])
+def save_grades(activity_id):
+    activity = activity_service.get_by_id(activity_id)
+    if not activity:
+        return "Activity not found", 404
+    
+    topic = topic_service.get_by_id(activity['topic_id'])
+    
+    section = section_service.get_by_id(topic['section_id'])
+    enrollments = course_taken_service.get_students_by_section(section['id'])
+    
+    for enrollment in enrollments:
+        user_id = enrollment['user_id']
+        grade_key = f'grade_{user_id}'
+        grade_id_key = f'grade_id_{user_id}'
+        
+        if grade_key in request.form:
+            try:
+                grade_value = float(request.form[grade_key])
+                grade_value = max(1.0, min(7.0, grade_value))
+                grade_value = round(grade_value * 10) / 10
+                
+                if grade_id_key in request.form:
+                    grade_id = request.form[grade_id_key]
+                    grade_service.update(grade_id, grade_value)
+                else:
+                    grade_service.create(grade_value, user_id, activity_id)
+                    
+            except ValueError:
+                flash(f"Invalid grade format for student {enrollment['user_name']}", "danger")
+                return redirect(url_for('evaluate_students', activity_id=activity_id))
+    
+    flash("Grades saved successfully", "success")
+    return redirect(url_for('list_activities', topic_id=topic['id']))
 
 # ---------------- Uploads ----------------
 
@@ -738,15 +1003,44 @@ def import_data():
 
         try:
             import_service.import_json(uploaded_file, selected_type)
-            flash(f"Datos importados exitosamente como {selected_type}.")
+            flash(f"Correctly imported {selected_type} data")
         except Exception as e:
-            flash(f"Error al importar datos: {str(e)}")
+            flash(f"Error importing data: {str(e)}")
 
         return redirect(url_for('import_data'))
 
     return render_template('import/upload.html', file_types=file_types)
 
+# ---------------- Schedule ----------------
 
+@app.route('/schedule', methods=['GET'])
+def schedule_page():
+    periods = instance_service.get_periods()
+    
+    if not periods:
+        flash("No periods available in the system.", "warning")
+    
+    return render_template('schedule/index.html', periods=periods)
+
+@app.route('/schedule/generate', methods=['POST'])
+def generate_schedule():
+    period = request.form.get('period')
+    
+    if not period:
+        flash("Please select a period.", "danger")
+        return redirect(url_for('schedule_page'))
+    
+    try:
+        csv_data = schedule_service.generate_schedule_csv(period)
+        
+        response = make_response(csv_data)
+        response.headers["Content-Disposition"] = f"attachment; filename=schedule_{period}.csv"
+        response.headers["Content-Type"] = "text/csv"
+        
+        return response
+    except Exception as e:
+        flash(f"Error generating schedule: {str(e)}", "danger")
+        return redirect(url_for('schedule_page'))
 
 if __name__ == '__main__':
     app.run(debug=True)

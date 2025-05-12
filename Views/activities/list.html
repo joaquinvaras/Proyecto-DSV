@@ -1,67 +1,93 @@
 {% extends "base.html" %}
-
 {% block title %}Activities for {{ topic.name }}{% endblock %}
-
 {% block content %}
-<h2>Activities for {{ topic.name }}</h2>
-<h4>Course: {{ course.name }} - Section {{ section.number }} - Period {{ section.period }}</h4>
-<h5>Format:
+<div class="container mt-4">
+  <h2>Activities for {{ topic.name }}</h2>
+  <h4>Course: {{ course.name }} - Section {{ section.number }} - Period {{ instance.period }}</h4>
+  
+  <h5>Format:
     {% if topic.weight_or_percentage %}
-        <span class="badge bg-primary">Percentage-based (must sum to 100%)</span>
+      <span class="badge bg-primary">Percentage-based (must sum to 100%)</span>
     {% else %}
-        <span class="badge bg-secondary">Weight-based</span>
+      <span class="badge bg-secondary">Weight-based</span>
     {% endif %}
-</h5>
-
-<a href="{{ url_for('create_activity', topic_id=topic.id) }}" class="btn btn-primary mb-3">Create Activity</a>
-<a href="{{ url_for('list_sections', course_id=section.course_id) }}" class="btn btn-secondary mb-3">Back to Sections</a>
-
-<table class="table table-bordered">
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>{% if topic.weight_or_percentage %}Percentage{% else %}Weight{% endif %}</th>
-            <th>Optional</th>
-            <th>Actions</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% if activities %}
-            {% for activity in activities %}
+  </h5>
+  
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ category if category != 'message' else 'info' }}">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+  
+  <div class="mb-3">
+    <a href="{{ url_for('create_activity', topic_id=topic.id) }}" class="btn btn-primary">Create Activity</a>
+    <a href="{{ url_for('list_sections', instance_id=instance.id) }}" class="btn btn-secondary">Back to Sections</a>
+  </div>
+  
+  <div class="card">
+    <div class="card-header bg-light">
+      <strong>Activities</strong>
+    </div>
+    <div class="card-body">
+      <div class="table-responsive">
+        <table class="table table-bordered table-hover">
+          <thead class="table-light">
             <tr>
-                <td>{{ activity.name }}</td>
-                <td>
+              <th>Activity</th>
+              <th>{% if topic.weight_or_percentage %}Percentage{% else %}Weight{% endif %}</th>
+              <th>Optional</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if activities %}
+              {% for activity in activities %}
+                <tr>
+                  <td>{{ topic.name }} {{ activity.instance }}</td>
+                  <td>
                     {% if topic.weight_or_percentage %}
-                        {{ activity.weight }}%
+                      {{ (activity.weight / 10)|float }}%
                     {% else %}
-                        {{ activity.weight }}
+                      {{ activity.weight }}
                     {% endif %}
-                </td>
-                <td>
+                  </td>
+                  <td>
                     {% if activity.optional_flag %}
-                        <span class="badge bg-success">Yes</span>
+                      <span class="badge bg-success">Yes</span>
                     {% else %}
-                        <span class="badge bg-warning">No</span>
+                      <span class="badge bg-warning">No</span>
                     {% endif %}
-                </td>
-                <td>
-                    <a href="{{ url_for('edit_activity', id=activity.id) }}" class="btn btn-warning btn-sm">Edit</a>
-                    
-                    {% if topic.weight_or_percentage %}
-                        <a href="{{ url_for('delete_activity_percentage_view', id=activity.id) }}" class="btn btn-danger btn-sm">Delete</a>
-                    {% else %}
-                        <form method="POST" action="{{ url_for('delete_activity_direct', id=activity.id) }}" style="display: inline;">
-                            <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                  </td>
+                  <td>
+                    <div class="btn-group btn-group-sm">
+                      <a href="{{ url_for('edit_activity', id=activity.id) }}" class="btn btn-warning">Edit</a>
+                      
+                      {% if topic.weight_or_percentage %}
+                        <a href="{{ url_for('delete_activity_percentage_view', id=activity.id) }}" class="btn btn-danger">Delete</a>
+                      {% else %}
+                        <form method="POST" action="{{ url_for('delete_activity_direct', id=activity.id) }}" class="d-inline">
+                          <button type="submit" class="btn btn-danger">Delete</button>
                         </form>
-                    {% endif %}
-                </td>
-            </tr>
-            {% endfor %}
-        {% else %}
-            <tr>
+                      {% endif %}
+                      
+                      <a href="{{ url_for('evaluate_students', activity_id=activity.id) }}" class="btn btn-info">
+                        <i class="bi bi-journal-check"></i> Grade Students
+                      </a>
+                    </div>
+                  </td>
+                </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
                 <td colspan="4" class="text-center">No activities found for this topic. Create one!</td>
-            </tr>
-        {% endif %}
-    </tbody>
-</table>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}

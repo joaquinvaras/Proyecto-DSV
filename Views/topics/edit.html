@@ -1,70 +1,168 @@
 {% extends "base.html" %}
 {% block title %}Edit Topic{% endblock %}
 {% block content %}
-<h1>Edit Topic</h1>
-<h4>Section {{ section.number }} - Period {{ section.period }}</h4>
+<div class="container mt-4">
+  <h1>Edit Topic</h1>
+  <h4>Section {{ section.number }} - Period {{ instance.period }}</h4>
 
-<form method="POST" onsubmit="return validateForm()" style="max-width: 500px; margin: auto; padding: 20px; border: 1px solid #ccc; border-radius: 8px;">
-    <div style="margin-bottom: 15px;">
-        <label for="name" style="font-weight: bold;">Topic Name:</label><br>
-        <input type="text" name="name" id="name" value="{{ topic.name }}" required style="width: 100%; padding: 8px;">
-    </div>
-    
-    <div style="margin-bottom: 15px;">
-        <label for="weight_or_percentage" style="font-weight: bold;">Format for Activities:</label><br>
-        <input type="checkbox" name="weight_or_percentage" id="weight_or_percentage" {% if topic.weight_or_percentage %}checked{% endif %}> 
-        <span>Check for percentage-based (activities must sum to 100%). Uncheck for weight-based.</span>
-    </div>
-    
-    {% if section.weight_or_percentage %}
-    <h3>Current Percentages in Section:</h3>
-    <ul style="list-style-type: none; padding-left: 0;">
-        {% for t in topics if t.id != topic.id %}
-        <li style="margin-bottom: 10px;">
-            <strong>{{ t.name }}:</strong>
-            <input type="number" name="percentages_{{ t.id }}" value="{{ t.weight }}" step="1" min="1" max="100" required style="width: 70px;"> %
-        </li>
-        {% endfor %}
-    </ul>
-    <div style="margin-top: 15px;">
-        <label for="weight" style="font-weight: bold;">Topic Percentage:</label><br>
-        <input type="number" name="weight" id="weight" value="{{ topic.weight }}" step="1" min="1" max="100" required style="width: 100px;"> %
-    </div>
-    <p style="color: gray; margin-top: 5px;">Total must be exactly 100%</p>
-    {% else %}
-    <h3>Current Weights in Section:</h3>
-    <ul style="list-style-type: none; padding-left: 0;">
-        {% for t in topics if t.id != topic.id %}
-        <li style="margin-bottom: 5px;">
-            <strong>{{ t.name }}:</strong> {{ t.weight }}
-        </li>
-        {% endfor %}
-    </ul>
-    <div style="margin-top: 15px;">
-        <label for="weight" style="font-weight: bold;">Topic Weight:</label><br>
-        <input type="number" step="1" name="weight" id="weight" value="{{ topic.weight }}" required style="width: 100px;">
-    </div>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ category if category != 'message' else 'info' }}">{{ message }}</div>
+      {% endfor %}
     {% endif %}
-    <div style="margin-top: 20px; text-align: center;">
-        <a href="{{ url_for('list_sections', course_id=section.course_id) }}" class="btn btn-secondary">Cancel</a>
-        <button type="submit" class="btn btn-primary">Update Topic</button>
+  {% endwith %}
+
+  <div class="card">
+    <div class="card-header bg-light">
+      <strong>Topic Information</strong>
     </div>
-</form>
+    <div class="card-body">
+      <form method="POST" onsubmit="return validateAndPrepareForm()">
+        <div class="form-group mb-3">
+          <label for="name" class="form-label">Topic Name:</label>
+          <input type="text" name="name" id="name" value="{{ topic.name }}" required class="form-control">
+        </div>
+        
+        <div class="form-check mb-3">
+          <input type="checkbox" name="weight_or_percentage" id="weight_or_percentage" 
+                 {% if topic.weight_or_percentage %}checked{% endif %} class="form-check-input"> 
+          <label for="weight_or_percentage" class="form-check-label">
+            Check for percentage-based (activities must sum to 100%). Uncheck for weight-based.
+          </label>
+        </div>
+        
+        {% if section.weight_or_percentage %}
+          <div class="card mb-3">
+            <div class="card-header bg-light">Current Percentages in Section</div>
+            <div class="card-body">
+              <ul class="list-group mb-3">
+                {% for t in topics if t.id != topic.id %}
+                  <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <strong>{{ t.name }}:</strong>
+                    <div class="input-group" style="max-width: 150px;">
+                      <input type="number" name="percentages_display_{{ t.id }}" value="{{ (t.weight / 10)|float }}" 
+                             step="0.1" min="0.1" max="100" required class="form-control percentage-input">
+                      <span class="input-group-text">%</span>
+                    </div>
+                  </li>
+                {% endfor %}
+              </ul>
+            </div>
+          </div>
+          
+          <div class="form-group mb-3">
+            <label for="weight_display" class="form-label">Topic Percentage:</label>
+            <div class="input-group" style="max-width: 150px;">
+              <input type="number" name="weight_display" id="weight_display" value="{{ (topic.weight / 10)|float }}" 
+                     step="0.1" min="0.1" max="100" required class="form-control">
+              <span class="input-group-text">%</span>
+            </div>
+            <input type="hidden" name="weight" id="weight" value="{{ topic.weight }}">
+            <div class="form-text text-muted">Total must be exactly 100%</div>
+          </div>
+        {% else %}
+          <div class="card mb-3">
+            <div class="card-header bg-light">Current Weights in Section</div>
+            <div class="card-body">
+              <ul class="list-group">
+                {% for t in topics if t.id != topic.id %}
+                  <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <strong>{{ t.name }}:</strong>
+                    <span class="badge bg-primary rounded-pill">{{ t.weight }}</span>
+                  </li>
+                {% endfor %}
+              </ul>
+            </div>
+          </div>
+          
+          <div class="form-group mb-3">
+            <label for="weight" class="form-label">Topic Weight:</label>
+            <input type="number" step="1" name="weight" id="weight" value="{{ topic.weight }}" required 
+                   class="form-control" style="max-width: 150px;">
+          </div>
+        {% endif %}
+        
+        <div class="mt-4">
+          <button type="submit" class="btn btn-primary">Update Topic</button>
+          <a href="{{ url_for('list_sections', instance_id=instance.id) }}" class="btn btn-secondary">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 {% if section.weight_or_percentage %}
 <script>
-function validateForm() {
-    const inputs = document.querySelectorAll("input[type='number'][name^='percentages_']");
-    const topicPercentage = parseInt(document.getElementById('weight').value);
-    let total = 0;
-    inputs.forEach(input => {
-        total += parseInt(input.value) || 0;
-    });
-    total += topicPercentage;
-    if (total !== 100) {
-        alert("Total percentage must be exactly 100%. Current total: " + total + "%");
-        return false;
+function validateAndFormatNumber(value) {
+  value = String(value).trim();
+  
+  if (value.endsWith('.')) {
+    value = value.slice(0, -1);
+  }
+  
+  const num = parseFloat(value);
+  if (isNaN(num)) {
+    return null;
+  }
+  
+  return parseFloat(num.toFixed(1));
+}
+
+function validateAndPrepareForm() {
+  const percentageInputs = document.querySelectorAll(".percentage-input");
+  const weightDisplayEl = document.getElementById('weight_display');
+  const weightEl = document.getElementById('weight');
+  
+  let topicPercentage = validateAndFormatNumber(weightDisplayEl.value);
+  if (topicPercentage === null) {
+    alert("Please enter a valid number for the topic percentage.");
+    weightDisplayEl.focus();
+    return false;
+  }
+  
+  weightDisplayEl.value = topicPercentage;
+  
+  weightEl.value = Math.round(topicPercentage * 10);
+  
+  let total = 0;
+  let anyInvalid = false;
+  
+  percentageInputs.forEach(input => {
+    const value = validateAndFormatNumber(input.value);
+    if (value === null) {
+      alert(`Please enter a valid number for ${input.closest('li').querySelector('strong').textContent}`);
+      input.focus();
+      anyInvalid = true;
+      return;
     }
-    return true;
+    
+    input.value = value;
+    total += value;
+  });
+  
+  if (anyInvalid) {
+    return false;
+  }
+  
+  total += topicPercentage;
+  
+  if (Math.abs(total - 100) > 0.01) { 
+    alert(`Total percentage must be exactly 100%. Current total: ${total.toFixed(1)}%`);
+    return false;
+  }
+  
+  percentageInputs.forEach(input => {
+    const value = parseFloat(input.value);
+    const hiddenInput = document.createElement('input');
+    hiddenInput.type = 'hidden';
+    hiddenInput.name = 'percentages_' + input.name.split('_').pop();
+    hiddenInput.value = Math.round(value * 10);
+    
+    input.parentNode.appendChild(hiddenInput);
+  });
+  
+  return true;
 }
 </script>
 {% endif %}

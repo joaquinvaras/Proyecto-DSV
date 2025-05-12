@@ -1,43 +1,84 @@
 {% extends "base.html" %}
-
-{% block title %}Edit Section{% endblock %}
-
+{% block title %}Import Data{% endblock %}
 {% block content %}
-
-    <!DOCTYPE html>
-    <html lang="en">
-    <body>
-        <h2>Import JSON Data</h2>
-
-        {% with messages = get_flashed_messages() %}
+<div class="container mt-5">
+  <div class="row justify-content-center">
+    <div class="col-md-8">
+      <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+          <h3 class="mb-0">Import JSON Data</h3>
+        </div>
+        <div class="card-body">
+          {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
-                <ul>
-                    {% for message in messages %}
-                        <li>{{ message }}</li>
-                    {% endfor %}
-                </ul>
+              {% for category, message in messages %}
+                <div class="alert alert-{{ category if category != 'message' else 'info' }} alert-dismissible fade show">
+                  {{ message }}
+                  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+              {% endfor %}
             {% endif %}
-        {% endwith %}
-
-        <form method="POST" enctype="multipart/form-data" action="/import">
-            <label for="json_file">Selecciona un archivo JSON:</label>
-            <input type="file" name="json_file" accept=".json" required><br><br>
+          {% endwith %}
           
-            <label for="data_type">Selecciona el tipo de archivo:</label>
-            <select name="data_type" required>
-              <option value="alumnos">Alumnos</option>
-              <option value="profesores">Profesores</option>
-              <option value="cursos">Cursos</option>
-              <option value="instancias_cursos">Instancias de cursos</option>
-              <option value="instancias_cursos_secciones">Instancias de cursos con secciones</option>
-              <option value="alumnos_seccion">Alumnos por seccion</option>
-              <option value="notas_alumnos">Notas de alumnos</option>
-              <option value="salas_clases">Salas de clases</option>
-            </select>
-          
-            <button type="submit">Importar</button>
+          <form method="POST" enctype="multipart/form-data" action="/import" class="needs-validation" novalidate>
+            <div class="mb-4">
+              <label for="json_file" class="form-label fw-bold">Select a JSON File:</label>
+              <input type="file" class="form-control" id="json_file" name="json_file" accept=".json" required>
+              <div class="invalid-feedback">
+                Please select a JSON file to import.
+              </div>
+              <div class="form-text">
+                The file must be in a valid JSON format.
+              </div>
+            </div>
+            
+            <div class="mb-4">
+              <label for="data_type" class="form-label fw-bold">Select Data Type:</label>
+              <select class="form-select" id="data_type" name="data_type" required>
+                <option value="" selected disabled>Choose a data type...</option>
+                <option value="alumnos">Students</option>
+                <option value="profesores">Professors</option>
+                <option value="cursos">Courses</option>
+                <option value="instancias_cursos">Course Instances</option>
+                <option value="instancias_cursos_secciones">Course Instances with Sections</option>
+                <option value="alumnos_seccion">Students by Section</option>
+                <option value="notas_alumnos">Student Grades</option>
+                <option value="salas_clases">Classrooms</option>
+              </select>
+              <div class="invalid-feedback">
+                Please select a data type.
+              </div>
+              <div class="form-text">
+                Choose the type of data contained in your JSON file.
+              </div>
+            </div>
+            
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+              <button type="submit" class="btn btn-primary">
+                <i class="bi bi-upload"></i> Import Data
+              </button>
+            </div>
           </form>
-    </body>
-    </html>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
+<script>
+  // Form validation
+  (() => {
+    'use strict';
+    const forms = document.querySelectorAll('.needs-validation');
+    Array.from(forms).forEach(form => {
+      form.addEventListener('submit', event => {
+        if (!form.checkValidity()) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+        form.classList.add('was-validated');
+      }, false);
+    });
+  })();
+</script>
 {% endblock %}
