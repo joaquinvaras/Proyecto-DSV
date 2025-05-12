@@ -1,4 +1,5 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, make_response
+import io
 from Service.course_service import CourseService
 from Service.user_service import UserService
 from Service.section_service import SectionService
@@ -9,6 +10,7 @@ from Service.import_service import ImportService
 from Service.instance_service import InstanceService
 from Service.room_service import RoomService
 from Service.grade_service import GradeService
+from Service.schedule_service import ScheduleService
 
 
 app = Flask(__name__, template_folder='Views')
@@ -24,6 +26,7 @@ import_service = ImportService()
 instance_service = InstanceService()
 room_service = RoomService()
 grade_service = GradeService()
+schedule_service = ScheduleService()
 
 @app.route('/')
 def index():
@@ -1008,7 +1011,36 @@ def import_data():
 
     return render_template('import/upload.html', file_types=file_types)
 
+# ---------------- Schedule ----------------
 
+@app.route('/schedule', methods=['GET'])
+def schedule_page():
+    periods = instance_service.get_periods()
+    
+    if not periods:
+        flash("No periods available in the system.", "warning")
+    
+    return render_template('schedule/index.html', periods=periods)
+
+@app.route('/schedule/generate', methods=['POST'])
+def generate_schedule():
+    period = request.form.get('period')
+    
+    if not period:
+        flash("Please select a period.", "danger")
+        return redirect(url_for('schedule_page'))
+    
+    try:
+        csv_data = schedule_service.generate_schedule_csv(period)
+        
+        response = make_response(csv_data)
+        response.headers["Content-Disposition"] = f"attachment; filename=schedule_{period}.csv"
+        response.headers["Content-Type"] = "text/csv"
+        
+        return response
+    except Exception as e:
+        flash(f"Error generating schedule: {str(e)}", "danger")
+        return redirect(url_for('schedule_page'))
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}Schedule Generator{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+  <div class="row justify-content-center">
+    <div class="col-md-8">
+      <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+          <h3 class="mb-0">
+            <i class="bi bi-calendar3"></i> Schedule Generator
+          </h3>
+        </div>
+        <div class="card-body">
+          {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+              {% for category, message in messages %}
+                <div class="alert alert-{{ category if category != 'message' else 'info' }} alert-dismissible fade show">
+                  {{ message }}
+                  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+              {% endfor %}
+            {% endif %}
+          {% endwith %}
+          
+          <p class="lead">
+            Generate a schedule for a specific academic period. The system will create a CSV file with all sections
+            scheduled according to the following rules:
+          </p>
+          
+          <div class="card mb-4">
+            <div class="card-header bg-light">
+              <strong>Scheduling Rules</strong>
+            </div>
+            <div class="card-body">
+              <ul class="mb-0">
+                <li>Class hours: Monday to Friday, 9:00-13:00 and 14:00-18:00</li>
+                <li>Each course section gets consecutive blocks based on its credits</li>
+                <li>A room can only be used by one section at any given time</li>
+                <li>A professor cannot teach two sections at the same time</li>
+                <li>Room capacity is considered when assigning sections</li>
+              </ul>
+            </div>
+          </div>
+          
+          {% if periods %}
+            <form action="{{ url_for('generate_schedule') }}" method="POST">
+              <div class="mb-4">
+                <label for="period" class="form-label">Select Period</label>
+                <select name="period" id="period" class="form-select" required>
+                  <option value="" disabled selected>Choose academic period...</option>
+                  {% for period in periods %}
+                    <option value="{{ period }}">
+                      {{ period }}
+                      {% if period.endswith('-1') %}
+                        (Fall)
+                      {% elif period.endswith('-2') %}
+                        (Spring)
+                      {% endif %}
+                    </option>
+                  {% endfor %}
+                </select>
+                <div class="form-text">
+                  Choose the academic period for which you want to generate a schedule.
+                </div>
+              </div>
+              
+              <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-primary btn-lg">
+                  <i class="bi bi-download"></i> Generate and Download Schedule CSV
+                </button>
+              </div>
+            </form>
+          {% else %}
+            <div class="alert alert-warning">
+              <i class="bi bi-exclamation-triangle-fill"></i> No academic periods found in the system.
+              Please add course instances before generating schedules.
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
