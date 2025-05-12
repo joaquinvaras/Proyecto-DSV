@@ -74,7 +74,7 @@ CREATE TABLE Courses_Taken (
     user_id INT,
     course_id INT,
     section_id INT,
-    final_grade INT,
+    final_grade DECIMAL(2,1),
     UNIQUE (user_id, section_id),
     FOREIGN KEY (user_id) REFERENCES Users(id),
     FOREIGN KEY (course_id) REFERENCES Courses(id),

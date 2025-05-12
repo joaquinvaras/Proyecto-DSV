@@ -1,73 +1,151 @@
 {% extends "base.html" %}
 {% block title %}Delete Activity{% endblock %}
 {% block content %}
-<h1>Delete Activity: {{ activity.name }}</h1>
-<div class="alert alert-warning">
-  <strong>Warning!</strong> You are about to delete an activity in a topic that uses percentages. 
-  You need to redistribute the percentages among the remaining activities to ensure the total is 100%.
+<div class="container mt-4">
+  <h1>Delete Activity: {{ topic.name }} {{ activity.instance }}</h1>
+  
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ category if category != 'message' else 'info' }}">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+  
+  <div class="alert alert-warning">
+    <strong>Warning!</strong> You are about to delete an activity in a topic that uses percentages.
+    You need to redistribute the percentages among the remaining activities to ensure the total is 100%.
+  </div>
+  
+  <div class="card mb-3">
+    <div class="card-header bg-light">
+      <strong>Activity Information</strong>
+    </div>
+    <div class="card-body">
+      <p>Topic: <strong>{{ topic.name }}</strong> | Course: <strong>{{ course.name }}</strong> - Section <strong>{{ section.number }}</strong></p>
+      <p>Current activity to delete: <strong>{{ topic.name }} {{ activity.instance }}</strong> ({{ (activity.weight / 10)|float }}%)</p>
+    </div>
+  </div>
+  
+  <form method="POST" onsubmit="return validateAndPrepareForm()">
+    <div class="card">
+      <div class="card-header bg-light">
+        <strong>Redistribute Percentages</strong>
+      </div>
+      <div class="card-body">
+        <p>Please adjust the percentages for the remaining activities so that they total 100%:</p>
+        
+        {% if activities|length > 0 %}
+          <div class="table-responsive">
+            <table class="table table-bordered table-hover">
+              <thead class="table-light">
+                <tr>
+                  <th>Activity</th>
+                  <th>Current Percentage</th>
+                  <th>New Percentage</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for act in activities %}
+                  <tr>
+                    <td>{{ topic.name }} {{ act.instance }}</td>
+                    <td>{{ (act.weight / 10)|float }}%</td>
+                    <td>
+                      <div class="input-group">
+                        <input type="number" name="percentages_display_{{ act.id }}" value="{{ (act.weight / 10)|float }}"
+                               min="0.1" max="100" step="0.1" required class="form-control percentage-input">
+                        <span class="input-group-text">%</span>
+                      </div>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          
+          <p class="text-muted"><small>Total must be exactly 100%</small></p>
+          
+          <div class="mt-4 d-flex justify-content-between">
+            <a href="{{ url_for('list_activities', topic_id=topic.id) }}" class="btn btn-secondary">
+              <i class="bi bi-arrow-left"></i> Cancel
+            </a>
+            <button type="submit" class="btn btn-danger">
+              <i class="bi bi-trash"></i> Delete Activity and Redistribute
+            </button>
+          </div>
+        {% else %}
+          <div class="alert alert-danger">
+            There are no other activities to redistribute percentages to. You cannot delete the last activity in a percentage-based topic unless you change the topic format to weight-based first.
+          </div>
+          
+          <div class="mt-3">
+            <a href="{{ url_for('list_activities', topic_id=topic.id) }}" class="btn btn-secondary">
+              <i class="bi bi-arrow-left"></i> Back to Activities
+            </a>
+            <a href="{{ url_for('edit_topic', id=topic.id) }}" class="btn btn-primary">
+              <i class="bi bi-pencil"></i> Edit Topic Format
+            </a>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </form>
 </div>
 
-<h4>Topic: {{ topic.name }} | Course: {{ course.name }} - Section {{ section.number }}</h4>
-
-<p>Current activity to delete: <strong>{{ activity.name }}</strong> ({{ activity.weight }}%)</p>
-
-<form method="POST" onsubmit="return validateForm()">
-  <h3>Redistribute percentages:</h3>
-  <p>Please adjust the percentages for the remaining activities so that they total 100%:</p>
-  
-  {% if activities|length > 0 %}
-  <table class="table">
-    <thead>
-      <tr>
-        <th>Activity</th>
-        <th>Current Percentage</th>
-        <th>New Percentage</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for act in activities %}
-      <tr>
-        <td>{{ act.name }}</td>
-        <td>{{ act.weight }}%</td>
-        <td>
-          <input type="number" name="percentages_{{ act.id }}" value="{{ act.weight }}" 
-                 min="1" max="100" step="1" required class="form-control">
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-  
-  <div class="form-group">
-    <p style="color: gray;">Total must be exactly 100%</p>
-  </div>
-  
-  <div class="form-group">
-    <a href="{{ url_for('list_activities', topic_id=topic.id) }}" class="btn btn-secondary">Cancel</a>
-    <button type="submit" class="btn btn-danger">Delete Activity and Redistribute</button>
-  </div>
-  {% else %}
-  <div class="alert alert-danger">
-    There are no other activities to redistribute percentages to. You cannot delete the last activity in a percentage-based topic unless you change the topic format to weight-based first.
-  </div>
-  <div class="form-group">
-    <a href="{{ url_for('list_activities', topic_id=topic.id) }}" class="btn btn-secondary">Back to Activities</a>
-    <a href="{{ url_for('edit_topic', id=topic.id) }}" class="btn btn-primary">Edit Topic Format</a>
-  </div>
-  {% endif %}
-</form>
-
 <script>
-function validateForm() {
-  const inputs = document.querySelectorAll("input[type='number'][name^='percentages_']");
+function validateAndFormatNumber(value) {
+  value = String(value).trim();
+  
+  if (value.endsWith('.')) {
+    value = value.slice(0, -1);
+  }
+  
+  const num = parseFloat(value);
+  if (isNaN(num)) {
+    return null;
+  }
+  
+  return parseFloat(num.toFixed(1));
+}
+
+function validateAndPrepareForm() {
+  const percentageInputs = document.querySelectorAll(".percentage-input");
+  
   let total = 0;
-  inputs.forEach(input => {
-    total += parseInt(input.value) || 0;
+  let anyInvalid = false;
+  
+  percentageInputs.forEach(input => {
+    const value = validateAndFormatNumber(input.value);
+    if (value === null) {
+      alert(`Please enter a valid number for ${input.closest('tr').querySelector('td').textContent}`);
+      input.focus();
+      anyInvalid = true;
+      return;
+    }
+    
+    input.value = value;
+    total += value;
   });
-  if (total !== 100) {
-    alert("Total percentage must be exactly 100%. Current total: " + total + "%");
+  
+  if (anyInvalid) {
     return false;
   }
+  
+  if (Math.abs(total - 100) > 0.01) {
+    alert(`Total percentage must be exactly 100%. Current total: ${total.toFixed(1)}%`);
+    return false;
+  }
+  
+  percentageInputs.forEach(input => {
+    const value = parseFloat(input.value);
+    const hiddenInput = document.createElement('input');
+    hiddenInput.type = 'hidden';
+    hiddenInput.name = 'percentages_' + input.name.split('_').pop();
+    hiddenInput.value = Math.round(value * 10);
+    
+    input.parentNode.appendChild(hiddenInput);
+  });
+  
   return true;
 }
 </script>

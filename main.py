@@ -8,6 +8,7 @@ from Service.activity_service import ActivityService
 from Service.Import_service import ImportService
 from Service.instance_service import InstanceService
 from Service.room_service import RoomService
+from Service.grade_service import GradeService
 
 
 app = Flask(__name__, template_folder='Views')
@@ -22,6 +23,7 @@ activity_service = ActivityService()
 import_service = ImportService()
 instance_service = InstanceService()
 room_service = RoomService()
+grade_service = GradeService()
 
 @app.route('/')
 def index():
@@ -422,6 +424,133 @@ def delete_section(section_id):
         return redirect(url_for('list_sections', instance_id=instance_id))
     return "Section not found", 404
 
+@app.route('/sections/<int:section_id>/students/<int:user_id>/calculate_grade')
+def calculate_student_grade(section_id, user_id):
+    section = section_service.get_by_id(section_id)
+    if not section:
+        return "Section not found", 404
+        
+    student = user_service.get_by_id(user_id)
+    if not student:
+        return "Student not found", 404
+        
+    instance = instance_service.get_by_id(section['instance_id'])
+    course = course_service.get_by_id(instance['course_id'])
+    
+    topics = topic_service.get_by_section_id(section_id)
+    
+    topic_calculations = []
+    final_grade = 0
+    total_weight = 0
+    
+    for topic in topics:
+        topic_calculation = {
+            'topic': topic,
+            'activities': [],
+            'grade': 0,
+            'total_weight': 0,
+            'missing_percentage': 0,
+            'final_contribution': 0
+        }
+        
+        activities = activity_service.get_by_topic_id(topic['id'])
+        
+        topic_grade = 0
+        topic_total_weight = 0
+        missing_percentage = 0
+        
+        for activity in activities:
+            grade = grade_service.get_by_activity_and_student(activity['id'], user_id)
+            
+            activity_calculation = {
+                'activity': activity,
+                'grade': None,
+                'contribution': 0
+            }
+            
+            if grade:
+                activity_calculation['grade'] = float(grade['grade'])
+                grade_value = float(grade['grade'])
+            elif activity['optional_flag']:
+                topic_calculation['activities'].append(activity_calculation)
+                continue
+            else:
+                activity_calculation['grade'] = 1.0
+                grade_value = 1.0
+            
+            if topic['weight_or_percentage']:
+                activity_weight = float(activity['weight']) / 10.0
+                contribution = grade_value * (activity_weight / 100.0)
+                topic_grade += contribution
+                topic_total_weight += activity_weight / 100.0
+                activity_calculation['contribution'] = contribution
+            else:
+                contribution = grade_value * float(activity['weight'])
+                topic_grade += contribution
+                topic_total_weight += float(activity['weight'])
+                activity_calculation['contribution'] = contribution
+            
+            topic_calculation['activities'].append(activity_calculation)
+        
+        if topic_total_weight > 0:
+            if topic['weight_or_percentage']:
+                expected_total = 1.0
+                if abs(topic_total_weight - expected_total) > 0.001:
+                    missing_percentage = (expected_total - topic_total_weight) * 100
+                    if missing_percentage > 0:
+                        topic_grade = topic_grade / topic_total_weight
+                    else:
+                        topic_grade = topic_grade / topic_total_weight
+            else:
+                topic_grade = topic_grade / topic_total_weight
+        else:
+            topic_grade = 1.0
+        
+        topic_calculation['grade'] = topic_grade
+        topic_calculation['total_weight'] = topic_total_weight
+        topic_calculation['missing_percentage'] = missing_percentage
+        
+        if section['weight_or_percentage']:
+            topic_weight = float(topic['weight']) / 10.0
+            topic_contribution = topic_grade * (topic_weight / 100.0)
+            final_grade += topic_contribution
+            total_weight += topic_weight / 100.0
+        else:
+            topic_contribution = topic_grade * float(topic['weight'])
+            final_grade += topic_contribution
+            total_weight += float(topic['weight'])
+            
+        topic_calculation['final_contribution'] = topic_contribution
+        topic_calculations.append(topic_calculation)
+    
+    if total_weight > 0:
+        final_grade = final_grade / total_weight
+    else:
+        final_grade = 1.0
+    
+    final_grade = round(final_grade * 10) / 10
+    
+    course_taken_service.update_final_grade(user_id, section_id, final_grade)
+    
+    return render_template(
+        'sections/student_grade_calculation.html',
+        student=student,
+        section=section,
+        instance=instance,
+        course=course,
+        topic_calculations=topic_calculations,
+        final_grade=final_grade,
+        total_weight=total_weight
+    )
+
+@app.route('/sections/<int:section_id>/students/<int:user_id>/recalculate')
+def recalculate_grade(section_id, user_id):
+    final_grade = grade_service.calculate_final_grade(user_id, section_id)
+    course_taken_service.update_final_grade(user_id, section_id, final_grade)
+    
+    flash("Grade has been recalculated successfully", "success")
+    return redirect(url_for('calculate_student_grade', section_id=section_id, user_id=user_id))
+
 # ---------------- ENROLLMENT ----------------
 
 @app.route('/sections/<int:section_id>/enroll', methods=['POST'])
@@ -767,7 +896,81 @@ def delete_student(id):
         
     return redirect(url_for('list_students'))
 
+# ---------------- Grades ----------------
 
+@app.route('/activities/<int:activity_id>/evaluate', methods=['GET', 'POST'])
+def evaluate_students(activity_id):
+    activity = activity_service.get_by_id(activity_id)
+    if not activity:
+        return "Activity not found", 404
+    
+    topic = topic_service.get_by_id(activity['topic_id'])
+    section = section_service.get_by_id(topic['section_id'])
+    instance = instance_service.get_by_id(section['instance_id'])
+    course = course_service.get_by_id(instance['course_id'])
+    
+    enrollments = course_taken_service.get_students_by_section(section['id'])
+    students = []
+    
+    for enrollment in enrollments:
+        grade = grade_service.get_by_activity_and_student(activity_id, enrollment['user_id'])
+        
+        student = {
+            'id': enrollment['user_id'],
+            'name': enrollment['user_name'],
+            'email': enrollment['user_email']
+        }
+        
+        if grade:
+            student['grade'] = grade['grade']
+            student['grade_id'] = grade['id']
+        
+        students.append(student)
+    
+    return render_template(
+        'activities/evaluate_students.html',
+        activity=activity,
+        topic=topic,
+        section=section,
+        instance=instance,
+        course=course,
+        students=students
+    )
+
+@app.route('/activities/<int:activity_id>/save_grades', methods=['POST'])
+def save_grades(activity_id):
+    activity = activity_service.get_by_id(activity_id)
+    if not activity:
+        return "Activity not found", 404
+    
+    topic = topic_service.get_by_id(activity['topic_id'])
+    
+    section = section_service.get_by_id(topic['section_id'])
+    enrollments = course_taken_service.get_students_by_section(section['id'])
+    
+    for enrollment in enrollments:
+        user_id = enrollment['user_id']
+        grade_key = f'grade_{user_id}'
+        grade_id_key = f'grade_id_{user_id}'
+        
+        if grade_key in request.form:
+            try:
+                grade_value = float(request.form[grade_key])
+                grade_value = max(1.0, min(7.0, grade_value))
+                grade_value = round(grade_value * 10) / 10
+                
+                if grade_id_key in request.form:
+                    grade_id = request.form[grade_id_key]
+                    grade_service.update(grade_id, grade_value)
+                else:
+                    grade_service.create(grade_value, user_id, activity_id)
+                    
+            except ValueError:
+                flash(f"Invalid grade format for student {enrollment['user_name']}", "danger")
+                return redirect(url_for('evaluate_students', activity_id=activity_id))
+    
+    flash("Grades saved successfully", "success")
+    return redirect(url_for('list_activities', topic_id=topic['id']))
 
 # ---------------- Uploads ----------------
 
