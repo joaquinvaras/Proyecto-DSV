@@ -5,7 +5,7 @@ from Service.section_service import SectionService
 from Service.course_taken_service import CourseTakenService
 from Service.topic_service import TopicService
 from Service.activity_service import ActivityService
-from Service.Import_service import ImportService
+from Service.import_service import ImportService
 from Service.instance_service import InstanceService
 from Service.room_service import RoomService
 from Service.grade_service import GradeService
@@ -1000,9 +1000,9 @@ def import_data():
 
         try:
             import_service.import_json(uploaded_file, selected_type)
-            flash(f"Datos importados exitosamente como {selected_type}.")
+            flash(f"Correctly imported {selected_type} data")
         except Exception as e:
-            flash(f"Error al importar datos: {str(e)}")
+            flash(f"Error importing data: {str(e)}")
 
         return redirect(url_for('import_data'))
 
