@@ -16,7 +16,6 @@ class ScheduleService:
     def get_rooms(self):
         cursor = self.db.connect()
         cursor.execute("SELECT * FROM Rooms ORDER BY name")
-        #print(f"{cursor.fetchall()}")
         return cursor.fetchall()
     
     def get_sections_by_period(self, period):
