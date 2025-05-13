@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, make_response
+from flask import Flask, render_template, request, redirect, url_for, flash, make_response, Response
 import io
 from Service.course_service import CourseService
 from Service.user_service import UserService
@@ -1025,22 +1025,23 @@ def schedule_page():
 @app.route('/schedule/generate', methods=['POST'])
 def generate_schedule():
     period = request.form.get('period')
-    
+
     if not period:
-        flash("Please select a period.", "danger")
+        flash("No period selected.", "danger")
         return redirect(url_for('schedule_page'))
-    
-    try:
-        csv_data = schedule_service.generate_schedule_csv(period)
-        
-        response = make_response(csv_data)
-        response.headers["Content-Disposition"] = f"attachment; filename=schedule_{period}.csv"
-        response.headers["Content-Type"] = "text/csv"
-        
-        return response
-    except Exception as e:
-        flash(f"Error generating schedule: {str(e)}", "danger")
+
+    schedule = schedule_service.generate_schedule(period)
+
+    if not schedule:
+        flash("Could not generate a valid schedule. Please review room or teacher availability.", "danger")
         return redirect(url_for('schedule_page'))
+
+    csv_content = schedule_service.create_csv(period)
+    return Response(
+        csv_content,
+        mimetype="text/csv",
+        headers={"Content-Disposition": f"attachment; filename=schedule_{period}.csv"}
+    )
 
 if __name__ == '__main__':
     app.run(debug=True)
