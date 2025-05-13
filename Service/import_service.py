@@ -144,10 +144,23 @@ class ImportService:
         for seccion in secciones:
             seccion_id = seccion["id"]
             instancia_id = seccion["instancia_curso"]
-            profesor_id = seccion["profesor_id"]
+            profesor_import_id = seccion["profesor_id"]
             tipo_evaluacion = seccion["evaluacion"]["tipo"]
             combinacion_topicos = seccion["evaluacion"]["combinacion_topicos"]
             topicos_dict = seccion["evaluacion"]["topicos"]
+
+            try:
+                cursor.execute("""
+                    SELECT id FROM Users WHERE import_id = %s AND is_professor = TRUE
+                """, (profesor_import_id,))
+                result = cursor.fetchone()
+                if not result:
+                    print(f"[ERROR] No professor found with import_id {profesor_import_id}")
+                    continue
+                profesor_id = result["id"]
+            except Exception as e:
+                print(f"[ERROR] Fetching professor ID for import_id {profesor_import_id}: {e}")
+                continue
 
             try:
                 cursor.execute("""
@@ -205,9 +218,9 @@ class ImportService:
                         print(f"[SUCCESS] Inserted Activity {i} for Topic ID {topic_id}")
                     except Exception as e:
                         print(f"[ERROR] Inserting Activity {i} for Topic ID {topic_id}: {e}")
-        
-        
+                        
         self.db.commit()
+
 
     def _import_alumnos_seccion(self, data):
         

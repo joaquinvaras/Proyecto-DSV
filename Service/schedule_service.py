@@ -31,7 +31,7 @@ class ScheduleService:
             JOIN Courses c ON i.course_id = c.id
             JOIN Users u ON s.professor_id = u.id
             WHERE i.period = %s
-            ORDER BY c.name, s.number
+            ORDER BY c.credits DESC, c.name, s.number
         """, (period,))
         return cursor.fetchall()
     
