@@ -16,7 +16,7 @@ class ScheduleService:
     def get_rooms(self):
         cursor = self.db.connect()
         cursor.execute("SELECT * FROM Rooms ORDER BY name")
-        print(f"{cursor.fetchall()}")
+        #print(f"{cursor.fetchall()}")
         return cursor.fetchall()
     
     def get_sections_by_period(self, period):
@@ -36,15 +36,14 @@ class ScheduleService:
         return cursor.fetchall()
     
     def generate_schedule(self, period):
-        sections = self.get_sections_by_period(period)
+        sections = sorted(self.get_sections_by_period(period), key=lambda x: -x['credits'])
         rooms = self.get_rooms()
 
-        hours = [9, 10, 11, 12, 14, 15, 16, 17]
+        hours = list(range(9, 18))
         days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
 
         room_occupancy = {room['id']: {day: {h: False for h in hours} for day in days} for room in rooms}
         teacher_occupancy = {}
-
         schedule = []
 
         for section in sections:
@@ -59,12 +58,12 @@ class ScheduleService:
                 for room in rooms:
                     for i in range(len(hours) - credits + 1):
                         time_block = hours[i:i+credits]
-
+                        
                         if any(h == 13 for h in time_block):
                             continue
                         if time_block[-1] > 17:
                             continue
-
+                        
                         if all(not room_occupancy[room['id']][day][h] for h in time_block) and \
                         all(not teacher_occupancy[prof_id][day][h] for h in time_block):
 
