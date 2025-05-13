@@ -6,6 +6,13 @@
   <h4>Student: {{ student.name }}</h4>
   <h5>Course: {{ course.name }} - Section {{ section.number }} - Period {{ instance.period }}</h5>
   
+  {% if section.is_closed %}
+    <div class="alert alert-danger">
+      <strong><i class="bi bi-lock-fill"></i> This section is closed.</strong> 
+      The grades are finalized and cannot be recalculated.
+    </div>
+  {% endif %}
+  
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
       {% for category, message in messages %}
@@ -19,14 +26,28 @@
       <i class="bi bi-arrow-left"></i> Back to Students
     </a>
     
-    <a href="{{ url_for('recalculate_grade', section_id=section.id, user_id=student.id) }}" class="btn btn-primary">
-      <i class="bi bi-arrow-clockwise"></i> Recalculate Grade
-    </a>
+    {% if not section.is_closed %}
+      <a href="{{ url_for('recalculate_grade', section_id=section.id, user_id=student.id) }}" class="btn btn-primary">
+        <i class="bi bi-arrow-clockwise"></i> Recalculate Grade
+      </a>
+    {% else %}
+      <button class="btn btn-primary disabled" aria-disabled="true">
+        <i class="bi bi-lock-fill"></i> Recalculate Grade
+      </button>
+    {% endif %}
   </div>
   
-  <div class="alert alert-primary">
-    <h4 class="alert-heading">Final Grade: {{ "%.1f"|format(final_grade|float) }}</h4>
-    <p class="mb-0">This grade is calculated based on all topics and their associated activities.</p>
+  <div class="alert {% if section.is_closed %}alert-warning{% else %}alert-primary{% endif %}">
+    <h4 class="alert-heading">
+      Final Grade: {{ "%.1f"|format(final_grade|float) }}
+      {% if section.is_closed %}<span class="badge bg-danger"><i class="bi bi-lock-fill"></i> Finalized</span>{% endif %}
+    </h4>
+    <p class="mb-0">
+      This grade is calculated based on all topics and their associated activities.
+      {% if section.is_closed %}
+        <strong>Since the section is closed, this grade is final and cannot be changed.</strong>
+      {% endif %}
+    </p>
   </div>
   
   {% for topic_calculation in topic_calculations %}
@@ -162,7 +183,10 @@
           </tr>
           <tr>
             <td colspan="3" class="text-end"><strong>Final Grade:</strong></td>
-            <td><strong>{{ "%.1f"|format(final_grade|float) }}</strong></td>
+            <td>
+              <strong>{{ "%.1f"|format(final_grade|float) }}</strong>
+              {% if section.is_closed %}<span class="badge bg-danger"><i class="bi bi-lock-fill"></i> Finalized</span>{% endif %}
+            </td>
           </tr>
         </tfoot>
       </table>

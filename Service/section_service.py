@@ -7,7 +7,7 @@ class SectionService:
     def get_all(self):
         cursor = self.db.connect()
         cursor.execute("""
-        SELECT s.id, s.instance_id, s.number, s.weight_or_percentage, 
+        SELECT s.id, s.instance_id, s.number, s.weight_or_percentage, s.is_closed, 
                u.name AS professor_name, i.period, i.course_id
         FROM Sections s
         JOIN Instances i ON s.instance_id = i.id
@@ -18,7 +18,7 @@ class SectionService:
     def get_by_id(self, section_id):
         cursor = self.db.connect()
         cursor.execute("""
-        SELECT s.id, s.instance_id, s.number, s.weight_or_percentage, s.professor_id,
+        SELECT s.id, s.instance_id, s.number, s.weight_or_percentage, s.professor_id, s.is_closed,
                u.name AS professor_name, i.period, i.course_id
         FROM Sections s
         JOIN Instances i ON s.instance_id = i.id
@@ -30,7 +30,7 @@ class SectionService:
     def get_by_instance_id(self, instance_id):
         cursor = self.db.connect()
         cursor.execute("""
-        SELECT s.id, s.instance_id, s.number, s.weight_or_percentage, 
+        SELECT s.id, s.instance_id, s.number, s.weight_or_percentage, s.is_closed, 
                u.name AS professor_name, i.period, i.course_id
         FROM Sections s
         JOIN Instances i ON s.instance_id = i.id
@@ -42,7 +42,7 @@ class SectionService:
     def get_by_course_id(self, course_id):
         cursor = self.db.connect()
         cursor.execute("""
-        SELECT s.id, s.instance_id, s.number, s.weight_or_percentage, 
+        SELECT s.id, s.instance_id, s.number, s.weight_or_percentage, s.is_closed, 
                u.name AS professor_name, i.period, i.course_id
         FROM Sections s
         JOIN Instances i ON s.instance_id = i.id
@@ -54,7 +54,7 @@ class SectionService:
     def get_by_course_and_period(self, course_id, period):
         cursor = self.db.connect()
         cursor.execute("""
-        SELECT s.id, s.instance_id, s.number, s.weight_or_percentage, 
+        SELECT s.id, s.instance_id, s.number, s.weight_or_percentage, s.is_closed, 
                u.name AS professor_name, i.period, i.course_id
         FROM Sections s
         JOIN Instances i ON s.instance_id = i.id
@@ -83,13 +83,17 @@ class SectionService:
     def create(self, instance_id, number, professor_id, weight_or_percentage):
         cursor = self.db.connect()
         cursor.execute(
-            "INSERT INTO Sections (instance_id, number, professor_id, weight_or_percentage) VALUES (%s, %s, %s, %s)",
+            "INSERT INTO Sections (instance_id, number, professor_id, weight_or_percentage, is_closed) VALUES (%s, %s, %s, %s, FALSE)",
             (instance_id, number, professor_id, weight_or_percentage)
         )
         self.db.commit()
         return cursor.lastrowid
     
     def update(self, section_id, number, professor_id, weight_or_percentage):
+        section = self.get_by_id(section_id)
+        if section and section['is_closed']:
+            raise ValueError("Cannot modify a closed section")
+            
         cursor = self.db.connect()
         cursor.execute(
             "UPDATE Sections SET number = %s, professor_id = %s, weight_or_percentage = %s WHERE id = %s",
@@ -97,7 +101,24 @@ class SectionService:
         )
         self.db.commit()
     
+    def close_section(self, section_id):
+        section = self.get_by_id(section_id)
+        if not section:
+            raise ValueError("Section not found")
+        
+        cursor = self.db.connect()
+        cursor.execute(
+            "UPDATE Sections SET is_closed = TRUE WHERE id = %s",
+            (section_id,)
+        )
+        self.db.commit()
+        return True
+    
     def delete(self, section_id):
+        section = self.get_by_id(section_id)
+        if section and section['is_closed']:
+            raise ValueError("Cannot delete a closed section")
+            
         cursor = self.db.connect()
         
         cursor.execute("SELECT id FROM Topics WHERE section_id = %s", (section_id,))

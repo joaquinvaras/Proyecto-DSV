@@ -3,6 +3,14 @@
 {% block content %}
 <div class="container mt-4">
   <h2>Students Enrolled in Section {{ section.number }} - Period: {{ instance.period }}</h2>
+  
+  {% if section.is_closed %}
+    <div class="alert alert-danger">
+      <strong><i class="bi bi-lock-fill"></i> This section is closed.</strong> 
+      Students cannot be enrolled or unenrolled, and the grades are finalized.
+    </div>
+  {% endif %}
+  
   <a href="{{ url_for('list_sections', instance_id=instance.id) }}" class="btn btn-secondary mb-3">Back to Sections</a>
   
   {% with messages = get_flashed_messages(with_categories=true) %}
@@ -13,33 +21,40 @@
     {% endif %}
   {% endwith %}
   
-  <div class="card mb-4">
-    <div class="card-header bg-light">
-      <h5>Enroll New Student</h5>
+  {% if not section.is_closed %}
+    <div class="card mb-4">
+      <div class="card-header bg-light">
+        <h5>Enroll New Student</h5>
+      </div>
+      <div class="card-body">
+        <form action="{{ url_for('enroll_student_in_section', section_id=section.id) }}" method="post" class="row g-3 align-items-end">
+          <div class="col-md-8">
+            <label for="user_id" class="form-label">Select Student</label>
+            <select name="user_id" id="user_id" class="form-select" required>
+              <option value="">Choose a student...</option>
+              {% for student in students %}
+                {% if student.id|string not in enrolled_student_ids %}
+                  <option value="{{ student.id }}">{{ student.name }} ({{ student.email }})</option>
+                {% endif %}
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-4">
+            <button type="submit" class="btn btn-success">Enroll Student</button>
+          </div>
+        </form>
+      </div>
     </div>
-    <div class="card-body">
-      <form action="{{ url_for('enroll_student_in_section', section_id=section.id) }}" method="post" class="row g-3 align-items-end">
-        <div class="col-md-8">
-          <label for="user_id" class="form-label">Select Student</label>
-          <select name="user_id" id="user_id" class="form-select" required>
-            <option value="">Choose a student...</option>
-            {% for student in students %}
-              {% if student.id|string not in enrolled_student_ids %}
-                <option value="{{ student.id }}">{{ student.name }} ({{ student.email }})</option>
-              {% endif %}
-            {% endfor %}
-          </select>
-        </div>
-        <div class="col-md-4">
-          <button type="submit" class="btn btn-success">Enroll Student</button>
-        </div>
-      </form>
-    </div>
-  </div>
+  {% endif %}
   
   <div class="card">
     <div class="card-header bg-light">
-      <h5>Currently Enrolled Students</h5>
+      <h5>
+        Currently Enrolled Students
+        {% if section.is_closed %}
+          <span class="badge bg-danger"><i class="bi bi-lock-fill"></i> Finalized</span>
+        {% endif %}
+      </h5>
     </div>
     <div class="card-body">
       {% if enrollments %}
@@ -60,6 +75,9 @@
                 <td>
                   {% if enrollment.final_grade %}
                     {{ "%.1f"|format(enrollment.final_grade|float) }}
+                    {% if section.is_closed %}
+                      <span class="badge bg-danger"><i class="bi bi-lock-fill"></i> Finalized</span>
+                    {% endif %}
                   {% else %}
                     Not calculated
                   {% endif %}
@@ -67,11 +85,14 @@
                 <td>
                   <div class="btn-group btn-group-sm">
                     <a href="{{ url_for('calculate_student_grade', section_id=section.id, user_id=enrollment.user_id) }}" class="btn btn-info">
-                      <i class="bi bi-calculator"></i> Calculate Grade
+                      <i class="bi bi-calculator"></i> {% if section.is_closed %}View{% else %}Calculate{% endif %} Grade
                     </a>
-                    <form action="{{ url_for('unenroll_student_from_section', section_id=section.id, user_id=enrollment.user_id) }}" method="post" class="d-inline">
-                      <button type="submit" class="btn btn-danger">Unenroll</button>
-                    </form>
+                    
+                    {% if not section.is_closed %}
+                      <form action="{{ url_for('unenroll_student_from_section', section_id=section.id, user_id=enrollment.user_id) }}" method="post" class="d-inline">
+                        <button type="submit" class="btn btn-danger">Unenroll</button>
+                      </form>
+                    {% endif %}
                   </div>
                 </td>
               </tr>

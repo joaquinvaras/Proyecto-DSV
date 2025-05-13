@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, make_response, Response
+from flask import Flask, render_template, request, redirect, url_for, flash, Response
 import io
 from Service.course_service import CourseService
 from Service.user_service import UserService
@@ -556,6 +556,20 @@ def recalculate_grade(section_id, user_id):
     
     flash("Grade has been recalculated successfully", "success")
     return redirect(url_for('calculate_student_grade', section_id=section_id, user_id=user_id))
+
+@app.route('/sections/<int:section_id>/close', methods=['POST'])
+def close_section(section_id):
+    section = section_service.get_by_id(section_id)
+    if not section:
+        return "Section not found", 404
+        
+    try:
+        section_service.close_section(section_id)
+        flash(f"Section {section['number']} has been closed successfully. It can no longer be edited or deleted.", "success")
+    except ValueError as e:
+        flash(str(e), "danger")
+        
+    return redirect(url_for('list_sections', instance_id=section['instance_id']))
 
 # ---------------- ENROLLMENT ----------------
 
