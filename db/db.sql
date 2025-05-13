@@ -36,6 +36,7 @@ CREATE TABLE Sections (
     number INT,
     professor_id INT,
     weight_or_percentage BOOLEAN,
+    is_closed BOOLEAN DEFAULT FALSE,
     FOREIGN KEY (instance_id) REFERENCES Instances(id),
     FOREIGN KEY (professor_id) REFERENCES Users(id)
 );
