@@ -26,7 +26,7 @@ class RoomService:
             (name, capacity)
         )
         self.db.commit()
-        return cursor.lastrowid
+        return cursor.lastrowid4
     
     def update(self, room_id, name, capacity):
         cursor = self.db.connect()
@@ -58,8 +58,6 @@ class RoomService:
         return cursor.fetchall()
     
     def get_available_rooms(self, time_slot, day, period):
-        # This is a placeholder for a more complex query that would check
-        # room availability based on a schedule table that you might add in the future
         cursor = self.db.connect()
         cursor.execute("SELECT * FROM Rooms ORDER BY name")
         return cursor.fetchall()
