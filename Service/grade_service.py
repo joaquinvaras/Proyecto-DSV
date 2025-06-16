@@ -70,7 +70,8 @@ class GradeService:
         cursor.execute("DELETE FROM Grades WHERE id = %s", (grade_id,))
         self.db.commit()
     
-    def calculate_final_grade(self, user_id, section_id):
+    # ----- solution SEPARATION OF QUERY AND COMMAND error ---
+    def _fetch_grade_calculation_data(self, user_id, section_id):
         cursor = self.db.connect()
         
         cursor.execute(
@@ -79,33 +80,42 @@ class GradeService:
         )
         topics = cursor.fetchall()
         
-        final_grade = 0
-        total_weight = 0
-        
         for topic in topics:
             topic_id = topic['id']
-            topic_weight = topic['weight']
-            is_percentage = topic['weight_or_percentage']
             
             cursor.execute(
                 "SELECT id, instance, weight, optional_flag FROM Activities WHERE topic_id = %s",
                 (topic_id,)
             )
-            activities = cursor.fetchall()
+            topic['activities'] = cursor.fetchall()
             
-            topic_grade = 0
-            topic_total_weight = 0
-            
-            for activity in activities:
+            for activity in topic['activities']:
                 activity_id = activity['id']
-                activity_weight = activity['weight']
-                is_optional = activity['optional_flag']
-                
                 cursor.execute(
                     "SELECT grade FROM Grades WHERE user_id = %s AND activity_id = %s",
                     (user_id, activity_id)
                 )
-                grade_result = cursor.fetchone()
+                activity['grade_result'] = cursor.fetchone()
+        
+        return topics
+    
+    def calculate_final_grade(self, user_id, section_id):
+        topics = self._fetch_grade_calculation_data(user_id, section_id)
+        
+        final_grade = 0
+        total_weight = 0
+        
+        for topic in topics:
+            topic_weight = topic['weight']
+            is_percentage = topic['weight_or_percentage']
+            
+            topic_grade = 0
+            topic_total_weight = 0
+            
+            for activity in topic['activities']:
+                activity_weight = activity['weight']
+                is_optional = activity['optional_flag']
+                grade_result = activity['grade_result']
                 
                 if not grade_result:
                     if is_optional:
@@ -134,3 +144,4 @@ class GradeService:
             return round(final_grade / total_weight, 1)
         else:
             return 0
+    # ----- solution SEPARATION OF QUERY AND COMMAND error ---

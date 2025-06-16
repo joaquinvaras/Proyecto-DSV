@@ -7,11 +7,17 @@ class ScheduleService:
         self.db = DatabaseConnection()
         self.last_schedule = []
     
-    def get_available_periods(self):
+    # ----- solution SEPARATION OF QUERY AND COMMAND error ---
+    def _fetch_periods_from_database(self):
         cursor = self.db.connect()
         cursor.execute("SELECT DISTINCT period FROM Instances ORDER BY period DESC")
-        periods = [row['period'] for row in cursor.fetchall()]
+        return cursor.fetchall()
+    
+    def get_available_periods(self):
+        rows = self._fetch_periods_from_database()
+        periods = [row['period'] for row in rows]
         return periods
+    # ----- solution SEPARATION OF QUERY AND COMMAND error ---
     
     def get_rooms(self):
         cursor = self.db.connect()
