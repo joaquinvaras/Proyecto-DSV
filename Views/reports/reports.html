@@ -1,0 +1,302 @@
+{% extends "base.html" %}
+{% block title %}Reports{% endblock %}
+{% block content %}
+<div class="container mt-4">
+  <h2>Academic Reports</h2>
+  
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ category if category != 'message' else 'info' }}">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+  
+  {% if not report_context %}
+    <div class="card">
+      <div class="card-header bg-light">
+        <h4>Generate Report</h4>
+      </div>
+      <div class="card-body">
+        <form method="POST" class="needs-validation" novalidate>
+          
+          <div class="mb-4">
+            <label class="form-label">
+              <strong>Step 1:</strong> Select Report Type
+            </label>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="report_type" value="topic_instance" id="topic_instance" onchange="showReportFields()">
+              <label class="form-check-label" for="topic_instance">
+                <strong>Topic Instance Grades</strong><br>
+                <small class="text-muted">Grades for a specific activity (e.g., Project Delivery 2 from Section 1)</small>
+              </label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="report_type" value="section_final" id="section_final" onchange="showReportFields()">
+              <label class="form-check-label" for="section_final">
+                <strong>Section Final Grades</strong><br>
+                <small class="text-muted">Final grades for all students in a closed section</small>
+              </label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="report_type" value="student_transcript" id="student_transcript" onchange="showReportFields()">
+              <label class="form-check-label" for="student_transcript">
+                <strong>Student Transcript</strong><br>
+                <small class="text-muted">All closed courses taken by a specific student</small>
+              </label>
+            </div>
+          </div>
+          
+          <div id="report_fields" style="display: none;">
+            <div class="mb-4">
+              <label class="form-label">
+                <strong>Step 2:</strong> Select Report Details
+              </label>
+              
+              <div id="topic_instance_fields" class="report-fields" style="display: none;">
+                <div class="mb-3">
+                  <label for="activity_id" class="form-label">Select Activity</label>
+                  <select name="activity_id" id="activity_id" class="form-select">
+                    <option value="">Choose an activity...</option>
+                    {% for activity in activities %}
+                      <option value="{{ activity.id }}">
+                        {{ activity.course_name }} - {{ activity.period }} - Section {{ activity.section_number }} - 
+                        {{ activity.topic_name }} {{ activity.instance }}
+                      </option>
+                    {% endfor %}
+                  </select>
+                </div>
+              </div>
+              
+              <div id="section_final_fields" class="report-fields" style="display: none;">
+                <div class="mb-3">
+                  <label for="section_id" class="form-label">Select Closed Section</label>
+                  <select name="section_id" id="section_id" class="form-select">
+                    <option value="">Choose a closed section...</option>
+                    {% for section in closed_sections %}
+                      <option value="{{ section.id }}">
+                        {{ section.course_name }} - {{ section.period }} - Section {{ section.number }}
+                        <span class="badge bg-danger">Closed</span>
+                      </option>
+                    {% endfor %}
+                  </select>
+                </div>
+              </div>
+              
+              <div id="student_transcript_fields" class="report-fields" style="display: none;">
+                <div class="mb-3">
+                  <label for="student_id" class="form-label">Select Student</label>
+                  <select name="student_id" id="student_id" class="form-select">
+                    <option value="">Choose a student...</option>
+                    {% for student in students %}
+                      <option value="{{ student.id }}">
+                        {{ student.name }} ({{ student.email }})
+                      </option>
+                    {% endfor %}
+                  </select>
+                </div>
+              </div>
+            </div>
+            
+            <div class="mb-3">
+              <button type="submit" class="btn btn-primary">
+                <i class="bi bi-file-text"></i> Generate Report
+              </button>
+            </div>
+          </div>
+          
+        </form>
+      </div>
+    </div>
+    
+  {% else %}
+    <div class="mb-3">
+      <a href="{{ url_for('reports') }}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Reports
+      </a>
+    </div>
+    
+    {% if report_context.type == 'topic_instance' %}
+      <div class="card">
+        <div class="card-header bg-primary text-white">
+          <h4>Topic Instance Grades Report</h4>
+        </div>
+        <div class="card-body">
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <strong>Course:</strong> {{ report_context.course.name }}<br>
+              <strong>Period:</strong> {{ report_context.instance.period }}<br>
+              <strong>Section:</strong> {{ report_context.section.number }}
+            </div>
+            <div class="col-md-6">
+              <strong>Topic:</strong> {{ report_context.topic.name }}<br>
+              <strong>Activity:</strong> Instance {{ report_context.activity.instance }}<br>
+              <strong>Weight:</strong> {{ report_context.activity.weight }}
+            </div>
+          </div>
+          
+          <table class="table table-bordered">
+            <thead class="table-light">
+              <tr>
+                <th>Student Name</th>
+                <th>Email</th>
+                <th>Grade</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for grade_data in report_context.grades_data %}
+                <tr>
+                  <td>{{ grade_data.student_name }}</td>
+                  <td>{{ grade_data.student_email }}</td>
+                  <td>
+                    {% if grade_data.grade != 'Not graded' %}
+                      {{ "%.1f"|format(grade_data.grade|float) }}
+                    {% else %}
+                      <span class="badge bg-warning">{{ grade_data.grade }}</span>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      
+    {% elif report_context.type == 'section_final' %}
+      <div class="card">
+        <div class="card-header bg-success text-white">
+          <h4>Section Final Grades Report</h4>
+        </div>
+        <div class="card-body">
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <strong>Course:</strong> {{ report_context.course.name }}<br>
+              <strong>Period:</strong> {{ report_context.instance.period }}<br>
+              <strong>Section:</strong> {{ report_context.section.number }}
+            </div>
+            <div class="col-md-6">
+              <strong>Status:</strong> <span class="badge bg-danger">Closed</span><br>
+              <strong>Total Students:</strong> {{ report_context.enrollments|length }}
+            </div>
+          </div>
+          
+          <table class="table table-bordered">
+            <thead class="table-light">
+              <tr>
+                <th>Student Name</th>
+                <th>Email</th>
+                <th>Final Grade</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for enrollment in report_context.enrollments %}
+                <tr>
+                  <td>{{ enrollment.user_name }}</td>
+                  <td>{{ enrollment.user_email }}</td>
+                  <td>
+                    {% if enrollment.final_grade %}
+                      {{ "%.1f"|format(enrollment.final_grade|float) }}
+                    {% else %}
+                      <span class="badge bg-warning">Not calculated</span>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      
+    {% elif report_context.type == 'student_transcript' %}
+      <div class="card">
+        <div class="card-header bg-info text-white">
+          <h4>Student Transcript</h4>
+        </div>
+        <div class="card-body">
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <strong>Student:</strong> {{ report_context.student.name }}<br>
+              <strong>Email:</strong> {{ report_context.student.email }}
+            </div>
+            <div class="col-md-6">
+              <strong>Admission Date:</strong> {{ report_context.student.admission_date }}<br>
+              <strong>Completed Courses:</strong> {{ report_context.closed_courses|length }}
+            </div>
+          </div>
+          
+          {% if report_context.closed_courses %}
+            <table class="table table-bordered">
+              <thead class="table-light">
+                <tr>
+                  <th>Course</th>
+                  <th>Period</th>
+                  <th>Section</th>
+                  <th>Final Grade</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for course in report_context.closed_courses %}
+                  <tr>
+                    <td>{{ course.course_name }}</td>
+                    <td>{{ course.period }}</td>
+                    <td>{{ course.section_number }}</td>
+                    <td>
+                      {% if course.final_grade %}
+                        {{ "%.1f"|format(course.final_grade|float) }}
+                      {% else %}
+                        <span class="badge bg-warning">Not calculated</span>
+                      {% endif %}
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          {% else %}
+            <div class="alert alert-info">
+              This student has not completed any closed courses yet.
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    {% endif %}
+  {% endif %}
+</div>
+
+<script>
+function showReportFields() {
+  const reportFields = document.getElementById('report_fields');
+  const allFieldContainers = document.querySelectorAll('.report-fields');
+  
+  allFieldContainers.forEach(container => {
+    container.style.display = 'none';
+  });
+  
+  const selectedType = document.querySelector('input[name="report_type"]:checked');
+  
+  if (selectedType) {
+    reportFields.style.display = 'block';
+    
+    const fieldsContainer = document.getElementById(selectedType.value + '_fields');
+    if (fieldsContainer) {
+      fieldsContainer.style.display = 'block';
+    }
+  } else {
+    reportFields.style.display = 'none';
+  }
+}
+
+(function() {
+  'use strict'
+  const forms = document.querySelectorAll('.needs-validation')
+  Array.from(forms).forEach(function(form) {
+    form.addEventListener('submit', function(event) {
+      if (!form.checkValidity()) {
+        event.preventDefault()
+        event.stopPropagation()
+      }
+      form.classList.add('was-validated')
+    }, false)
+  })
+})()
+</script>
+{% endblock %}

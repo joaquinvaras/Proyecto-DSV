@@ -17,20 +17,34 @@
       <strong>Section Information</strong>
     </div>
     <div class="card-body">
-      <form method="post">
+      <form method="post" class="needs-validation" novalidate>
         <div class="form-group mb-3">
           <label for="number">Section Number</label>
-          <input type="text" class="form-control" name="number" id="number" required>
-          <small class="form-text text-muted">The section number must be unique for this instance.</small>
+          <input type="number" 
+                 class="form-control" 
+                 name="number" 
+                 id="number" 
+                 required
+                 min="1"
+                 max="999"
+                 step="1">
+          <div class="invalid-feedback">
+            Please provide a valid section number.
+          </div>
+          <small class="form-text text-muted">The section number must be unique for this instance (1-999).</small>
         </div>
         
         <div class="form-group mb-3">
           <label for="professor_id">Professor</label>
           <select class="form-control" name="professor_id" id="professor_id" required>
+            <option value="" disabled selected>Select a professor</option>
             {% for professor in professors %}
               <option value="{{ professor.id }}">{{ professor.name }} ({{ professor.email }})</option>
             {% endfor %}
           </select>
+          <div class="invalid-feedback">
+            Please select a professor.
+          </div>
         </div>
         
         <div class="form-check mt-3 mb-3">
@@ -48,4 +62,20 @@
     </div>
   </div>
 </div>
+
+<script>
+(function() {
+  'use strict'
+  const forms = document.querySelectorAll('.needs-validation')
+  Array.from(forms).forEach(function(form) {
+    form.addEventListener('submit', function(event) {
+      if (!form.checkValidity()) {
+        event.preventDefault()
+        event.stopPropagation()
+      }
+      form.classList.add('was-validated')
+    }, false)
+  })
+})()
+</script>
 {% endblock %}

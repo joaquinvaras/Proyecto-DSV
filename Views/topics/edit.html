@@ -18,10 +18,20 @@
       <strong>Topic Information</strong>
     </div>
     <div class="card-body">
-      <form method="POST" onsubmit="return validateAndPrepareForm()">
+      <form method="POST" class="needs-validation" onsubmit="return validateAndPrepareForm()" novalidate>
         <div class="form-group mb-3">
           <label for="name" class="form-label">Topic Name:</label>
-          <input type="text" name="name" id="name" value="{{ topic.name }}" required class="form-control">
+          <input type="text" 
+                 name="name" 
+                 id="name" 
+                 value="{{ topic.name }}" 
+                 required 
+                 class="form-control"
+                 maxlength="100">
+          <div class="invalid-feedback">
+            Please provide a topic name.
+          </div>
+          <small class="form-text text-muted">Maximum 100 characters.</small>
         </div>
         
         <div class="form-check mb-3">
@@ -79,7 +89,7 @@
           <div class="form-group mb-3">
             <label for="weight" class="form-label">Topic Weight:</label>
             <input type="number" step="1" name="weight" id="weight" value="{{ topic.weight }}" required 
-                   class="form-control" style="max-width: 150px;">
+                   class="form-control" style="max-width: 150px;" min="1">
           </div>
         {% endif %}
         
@@ -110,6 +120,13 @@ function validateAndFormatNumber(value) {
 }
 
 function validateAndPrepareForm() {
+  // Validate HTML5 form first
+  const form = document.querySelector('.needs-validation');
+  if (!form.checkValidity()) {
+    form.classList.add('was-validated');
+    return false;
+  }
+  
   const percentageInputs = document.querySelectorAll(".percentage-input");
   const weightDisplayEl = document.getElementById('weight_display');
   const weightEl = document.getElementById('weight');
@@ -164,6 +181,22 @@ function validateAndPrepareForm() {
   
   return true;
 }
+</script>
+{% else %}
+<script>
+(function() {
+  'use strict'
+  const forms = document.querySelectorAll('.needs-validation')
+  Array.from(forms).forEach(function(form) {
+    form.addEventListener('submit', function(event) {
+      if (!form.checkValidity()) {
+        event.preventDefault()
+        event.stopPropagation()
+      }
+      form.classList.add('was-validated')
+    }, false)
+  })
+})()
 </script>
 {% endif %}
 {% endblock %}

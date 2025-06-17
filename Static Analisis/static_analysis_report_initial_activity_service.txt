@@ -1,0 +1,27 @@
+************* Module activity_service
+activity_service.py:6:0: C0303: Trailing whitespace (trailing-whitespace)
+activity_service.py:11:0: C0303: Trailing whitespace (trailing-whitespace)
+activity_service.py:16:0: C0303: Trailing whitespace (trailing-whitespace)
+activity_service.py:19:0: C0301: Line too long (101/100) (line-too-long)
+activity_service.py:21:0: C0303: Trailing whitespace (trailing-whitespace)
+activity_service.py:37:0: C0303: Trailing whitespace (trailing-whitespace)
+activity_service.py:48:0: C0303: Trailing whitespace (trailing-whitespace)
+activity_service.py:52:0: C0301: Line too long (105/100) (line-too-long)
+activity_service.py:56:0: C0303: Trailing whitespace (trailing-whitespace)
+activity_service.py:64:0: C0303: Trailing whitespace (trailing-whitespace)
+activity_service.py:69:0: C0304: Final newline missing (missing-final-newline)
+activity_service.py:1:0: C0114: Missing module docstring (missing-module-docstring)
+activity_service.py:1:0: E0401: Unable to import 'db' (import-error)
+activity_service.py:3:0: C0115: Missing class docstring (missing-class-docstring)
+activity_service.py:7:4: C0116: Missing function or method docstring (missing-function-docstring)
+activity_service.py:12:4: C0116: Missing function or method docstring (missing-function-docstring)
+activity_service.py:17:4: C0116: Missing function or method docstring (missing-function-docstring)
+activity_service.py:22:4: C0116: Missing function or method docstring (missing-function-docstring)
+activity_service.py:38:4: C0116: Missing function or method docstring (missing-function-docstring)
+activity_service.py:49:4: C0116: Missing function or method docstring (missing-function-docstring)
+activity_service.py:57:4: C0116: Missing function or method docstring (missing-function-docstring)
+activity_service.py:65:4: C0116: Missing function or method docstring (missing-function-docstring)
+
+------------------------------------------------------------------
+Your code has been rated at 3.50/10 (previous run: 3.50/10, +0.00)
+

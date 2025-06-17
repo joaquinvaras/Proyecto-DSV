@@ -1,38 +1,70 @@
 {% extends "base.html" %}
 {% block title %}Create Student{% endblock %}
 {% block content %}
-    <h2>Create Student</h2>
-    <form method="POST" action="{{ url_for('create_student') }}">
-        <div class="mb-3">
-            <label for="name" class="form-label">Name</label>
-            <input
-                type="text"
-                class="form-control"
-                id="name"
-                name="name"
-                placeholder="Enter student name"
-                required>
-        </div>
-        <div class="mb-3">
-            <label for="email" class="form-label">Email</label>
-            <input
-                type="email"
-                class="form-control"
-                id="email"
-                name="email"
-                placeholder="Enter student email"
-                required>
-        </div>
-        <div class="mb-3">
-            <label for="admission_date" class="form-label">Admission Date</label>
-            <input
-                type="date"
-                class="form-control"
-                id="admission_date"
-                name="admission_date"
-                required>
-        </div>
-        <button type="submit" class="btn btn-success">Create</button>
-        <a href="{{ url_for('list_students') }}" class="btn btn-secondary">Cancel</a>
-    </form>
+<h2>Create Student</h2>
+<form method="POST" action="{{ url_for('create_student') }}" class="needs-validation" novalidate>
+  <div class="mb-3">
+    <label for="name" class="form-label">Name</label>
+    <input
+      type="text"
+      class="form-control"
+      id="name"
+      name="name"
+      placeholder="Enter student name"
+      required
+      maxlength="100">
+    <div class="invalid-feedback">
+      Please provide a student name.
+    </div>
+    <small class="form-text text-muted">Maximum 100 characters.</small>
+  </div>
+  
+  <div class="mb-3">
+    <label for="email" class="form-label">Email</label>
+    <input
+      type="email"
+      class="form-control"
+      id="email"
+      name="email"
+      placeholder="Enter student email"
+      required
+      maxlength="100">
+    <div class="invalid-feedback">
+      Please provide a valid email address.
+    </div>
+    <small class="form-text text-muted">Maximum 100 characters.</small>
+  </div>
+  
+  <div class="mb-3">
+    <label for="admission_date" class="form-label">Admission Date</label>
+    <input
+      type="date"
+      class="form-control"
+      id="admission_date"
+      name="admission_date"
+      required>
+    <div class="invalid-feedback">
+      Please provide a valid admission date.
+    </div>
+  </div>
+  
+  <button type="submit" class="btn btn-success">Create</button>
+  <a href="{{ url_for('list_students') }}" class="btn btn-secondary">Cancel</a>
+</form>
+
+<script>
+(function() {
+  'use strict'
+  const forms = document.querySelectorAll('.needs-validation')
+  Array.from(forms).forEach(function(form) {
+    form.addEventListener('submit', function(event) {
+      if (!form.checkValidity()) {
+        event.preventDefault()
+        event.stopPropagation()
+      }
+      form.classList.add('was-validated')
+    }, false)
+  })
+})()
+</script>
 {% endblock %}

@@ -1,0 +1,25 @@
+************* Module course_taken_service
+course_taken_service.py:6:0: C0303: Trailing whitespace (trailing-whitespace)
+course_taken_service.py:10:0: C0301: Line too long (110/100) (line-too-long)
+course_taken_service.py:14:0: C0303: Trailing whitespace (trailing-whitespace)
+course_taken_service.py:22:0: C0303: Trailing whitespace (trailing-whitespace)
+course_taken_service.py:26:0: C0301: Line too long (119/100) (line-too-long)
+course_taken_service.py:32:0: C0303: Trailing whitespace (trailing-whitespace)
+course_taken_service.py:44:0: C0303: Trailing whitespace (trailing-whitespace)
+course_taken_service.py:60:0: C0303: Trailing whitespace (trailing-whitespace)
+course_taken_service.py:68:0: C0303: Trailing whitespace (trailing-whitespace)
+course_taken_service.py:76:0: C0304: Final newline missing (missing-final-newline)
+course_taken_service.py:1:0: C0114: Missing module docstring (missing-module-docstring)
+course_taken_service.py:1:0: E0401: Unable to import 'db' (import-error)
+course_taken_service.py:3:0: C0115: Missing class docstring (missing-class-docstring)
+course_taken_service.py:7:4: C0116: Missing function or method docstring (missing-function-docstring)
+course_taken_service.py:15:4: C0116: Missing function or method docstring (missing-function-docstring)
+course_taken_service.py:23:4: C0116: Missing function or method docstring (missing-function-docstring)
+course_taken_service.py:33:4: C0116: Missing function or method docstring (missing-function-docstring)
+course_taken_service.py:45:4: C0116: Missing function or method docstring (missing-function-docstring)
+course_taken_service.py:61:4: C0116: Missing function or method docstring (missing-function-docstring)
+course_taken_service.py:69:4: C0116: Missing function or method docstring (missing-function-docstring)
+
+-----------------------------------
+Your code has been rated at 2.73/10
+

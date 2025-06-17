@@ -1,29 +1,57 @@
 {% extends "base.html" %}
 {% block title %}Edit Professor{% endblock %}
 {% block content %}
-    <h2>Edit Professor</h2>
-    <form method="POST" action="{{ url_for('edit_professor', id=professor.id) }}">
-        <div class="mb-3">
-            <label for="name" class="form-label">Name</label>
-            <input
-                type="text"
-                class="form-control"
-                id="name"
-                name="name"
-                value="{{ professor.name }}"
-                required>
-        </div>
-        <div class="mb-3">
-            <label for="email" class="form-label">Email</label>
-            <input
-                type="email"
-                class="form-control"
-                id="email"
-                name="email"
-                value="{{ professor.email }}"
-                required>
-        </div>
-        <button type="submit" class="btn btn-success">Save Changes</button>
-        <a href="{{ url_for('list_professors') }}" class="btn btn-secondary">Cancel</a>
-    </form>
+<h2>Edit Professor</h2>
+<form method="POST" action="{{ url_for('edit_professor', id=professor.id) }}" class="needs-validation" novalidate>
+  <div class="mb-3">
+    <label for="name" class="form-label">Name</label>
+    <input
+      type="text"
+      class="form-control"
+      id="name"
+      name="name"
+      value="{{ professor.name }}"
+      required
+      maxlength="100">
+    <div class="invalid-feedback">
+      Please provide a professor name.
+    </div>
+    <small class="form-text text-muted">Maximum 100 characters.</small>
+  </div>
+  
+  <div class="mb-3">
+    <label for="email" class="form-label">Email</label>
+    <input
+      type="email"
+      class="form-control"
+      id="email"
+      name="email"
+      value="{{ professor.email }}"
+      required
+      maxlength="100">
+    <div class="invalid-feedback">
+      Please provide a valid email address.
+    </div>
+    <small class="form-text text-muted">Maximum 100 characters.</small>
+  </div>
+  
+  <button type="submit" class="btn btn-success">Save Changes</button>
+  <a href="{{ url_for('list_professors') }}" class="btn btn-secondary">Cancel</a>
+</form>
+
+<script>
+(function() {
+  'use strict'
+  const forms = document.querySelectorAll('.needs-validation')
+  Array.from(forms).forEach(function(form) {
+    form.addEventListener('submit', function(event) {
+      if (!form.checkValidity()) {
+        event.preventDefault()
+        event.stopPropagation()
+      }
+      form.classList.add('was-validated')
+    }, false)
+  })
+})()
+</script>
 {% endblock %}

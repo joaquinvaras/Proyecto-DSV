@@ -46,12 +46,24 @@
         <strong>Section Information</strong>
       </div>
       <div class="card-body">
-        <form method="POST">
+        <form method="POST" class="needs-validation" novalidate>
           <div class="form-group mb-3">
             <label for="number">Section Number</label>
-            <input type="number" name="number" id="number" class="form-control" value="{{ section.number }}" required>
-            <small class="form-text text-muted">The section number must be unique for this instance.</small>
+            <input type="number" 
+                   name="number" 
+                   id="number" 
+                   class="form-control" 
+                   value="{{ section.number }}" 
+                   required
+                   min="1"
+                   max="999"
+                   step="1">
+            <div class="invalid-feedback">
+              Please provide a valid section number.
+            </div>
+            <small class="form-text text-muted">The section number must be unique for this instance (1-999).</small>
           </div>
+          
           <div class="form-group mb-3">
             <label for="professor">Professor</label>
             <select name="professor_id" id="professor" class="form-control" required>
@@ -61,14 +73,22 @@
                 </option>
               {% endfor %}
             </select>
+            <div class="invalid-feedback">
+              Please select a professor.
+            </div>
           </div>
+          
           <div class="form-check mt-3 mb-3">
-            <input class="form-check-input" type="checkbox" name="weight_or_percentage" id="weight_or_percentage"
-                  {% if section.weight_or_percentage %}checked{% endif %}>
+            <input class="form-check-input" 
+                   type="checkbox" 
+                   name="weight_or_percentage" 
+                   id="weight_or_percentage"
+                   {% if section.weight_or_percentage %}checked{% endif %}>
             <label class="form-check-label" for="weight_or_percentage">
               Use Percentage? (unmark means weights system)
             </label>
           </div>
+          
           <div class="mt-4">
             <button type="submit" class="btn btn-primary">Save Changes</button>
             <a href="{{ url_for('list_sections', instance_id=instance.id) }}" class="btn btn-secondary">Back to Sections</a>
@@ -78,4 +98,20 @@
     </div>
   {% endif %}
 </div>
+
+<script>
+(function() {
+  'use strict'
+  const forms = document.querySelectorAll('.needs-validation')
+  Array.from(forms).forEach(function(form) {
+    form.addEventListener('submit', function(event) {
+      if (!form.checkValidity()) {
+        event.preventDefault()
+        event.stopPropagation()
+      }
+      form.classList.add('was-validated')
+    }, false)
+  })
+})()
+</script>
 {% endblock %}

@@ -11,10 +11,12 @@
                   name="name" 
                   value="{{ course.name }}" 
                   class="form-control" 
-                  required>
+                  required
+                  maxlength="100">
             <div class="invalid-feedback">
                 Please provide a course name.
             </div>
+            <small class="form-text text-muted">Maximum 100 characters.</small>
         </div>
         
         <div class="mb-3">
@@ -24,10 +26,12 @@
                   name="nrc" 
                   value="{{ course.nrc }}" 
                   class="form-control" 
-                  required>
+                  required
+                  maxlength="50">
             <div class="invalid-feedback">
                 Please provide the NRC code.
             </div>
+            <small class="form-text text-muted">Maximum 50 characters.</small>
         </div>
         
         <div class="mb-3">
@@ -38,12 +42,13 @@
                   name="credits"
                   required
                   min="1"
+                  max="99"
                   value="{{ course.credits }}"
                   placeholder="Enter number of credits">
             <div class="invalid-feedback">
                 Please provide the number of credits.
             </div>
-            <small class="form-text text-muted">Number of credit hours per week.</small>
+            <small class="form-text text-muted">Number of credit hours per week (1-99).</small>
         </div>
         
         <div class="mb-3">
