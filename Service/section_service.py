@@ -103,7 +103,6 @@ class SectionService:
         cursor = self.db.connect()
 
         if exclude_section_id:
-            # Static analysis error fixing: line length
             cursor.execute(
                 "SELECT COUNT(*) as count FROM Sections "
                 "WHERE instance_id = %s AND number = %s AND id != %s",
@@ -122,7 +121,6 @@ class SectionService:
     def create(self, instance_id, number, professor_id, weight_or_percentage):
         """Create a new section for an instance."""
         cursor = self.db.connect()
-        # Static analysis error fixing: line length
         cursor.execute(
             "INSERT INTO Sections (instance_id, number, professor_id, "
             "weight_or_percentage, is_closed) VALUES (%s, %s, %s, %s, FALSE)",
@@ -138,7 +136,6 @@ class SectionService:
             raise ValueError("Cannot modify a closed section")
 
         cursor = self.db.connect()
-        # Static analysis error fixing: line length
         cursor.execute(
             "UPDATE Sections SET number = %s, professor_id = %s, "
             "weight_or_percentage = %s WHERE id = %s",

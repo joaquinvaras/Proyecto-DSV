@@ -134,7 +134,6 @@ class InstanceService:
     def get_periods(self):
         """Get all distinct periods from instances, ordered by most recent."""
         cursor = self.db.connect()
-        # Static analysis error fixing: line length
         cursor.execute("SELECT DISTINCT period FROM Instances "
                        "ORDER BY period DESC")
         results = cursor.fetchall()

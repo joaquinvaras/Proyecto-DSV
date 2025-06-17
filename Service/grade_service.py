@@ -91,7 +91,6 @@ class GradeService:
         cursor.execute("DELETE FROM Grades WHERE id = %s", (grade_id,))
         self.db.commit()
 
-    # ----- solution SEPARATION OF QUERY AND COMMAND error ---
     def _fetch_grade_calculation_data(self, user_id, section_id):
         """Fetch all data needed for grade calculation (query method)."""
         cursor = self.db.connect()
@@ -124,7 +123,6 @@ class GradeService:
 
         return topics
 
-    # Static analysis error fixing: function complexity reduction
     def _calculate_activity_grade(self, activity, is_percentage):
         """Calculate grade contribution for a single activity."""
         activity_weight = activity['weight']
@@ -157,7 +155,6 @@ class GradeService:
             contribution, weight_contrib = self._calculate_activity_grade(
                 activity, is_percentage)
 
-            # Static analysis error fixing: removed unnecessary else
             if contribution == 0 and weight_contrib == 0:
                 continue
 
@@ -183,9 +180,7 @@ class GradeService:
             final_grade += topic_final_grade * topic_weight
             total_weight += topic_weight
 
-        # Static analysis error fixing: removed unnecessary else
         if total_weight > 0:
             return round(final_grade / total_weight, 1)
 
         return 0
-    # ----- solution SEPARATION OF QUERY AND COMMAND error ---

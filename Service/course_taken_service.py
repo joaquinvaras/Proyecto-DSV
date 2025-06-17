@@ -17,7 +17,6 @@ class CourseTakenService:
     def enroll_student(self, user_id, course_id, section_id):
         """Enroll a student in a specific course section."""
         cursor = self.db.connect()
-        # Static analysis error fixing: line length
         cursor.execute(
             "INSERT INTO Courses_Taken (user_id, course_id, section_id, "
             "final_grade) VALUES (%s, %s, %s, %s)",
@@ -28,7 +27,6 @@ class CourseTakenService:
     def unenroll_student(self, course_id, section_id, user_id):
         """Remove a student's enrollment from a specific course section."""
         cursor = self.db.connect()
-        # Static analysis error fixing: line length
         cursor.execute(
             "DELETE FROM Courses_Taken WHERE course_id = %s AND "
             "section_id = %s AND user_id = %s",
@@ -39,7 +37,6 @@ class CourseTakenService:
     def get_students_by_section(self, section_id):
         """Get all students enrolled in a specific section."""
         cursor = self.db.connect()
-        # Static analysis error fixing: line length
         cursor.execute(
             "SELECT u.id AS user_id, u.name AS user_name, "
             "u.email AS user_email, ct.final_grade "

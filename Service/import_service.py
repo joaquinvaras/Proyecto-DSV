@@ -62,7 +62,6 @@ class ImportService:
             return False
         return semester in [1, 2]
 
-    # Static analysis error fixing: renamed parameter credits to course_credits
     def _is_valid_credits(self, course_credits):
         """Validate credits field."""
         if not isinstance(course_credits, int):
@@ -211,7 +210,6 @@ class ImportService:
             for topic_id, topic_eval in topicos_dict.items():
                 obligatorias = topic_eval['obligatorias']
 
-                # Static analysis error fixing: removed unnecessary parens
                 if not any(obligatorias):
                     self._validation_error(
                         f"Section {sec_index}, Topic {topic_id}: "
@@ -365,7 +363,6 @@ class ImportService:
     def _validate_credits_range(self, data):
         """Validate that course credits are in reasonable range."""
         for index, curso in enumerate(data['cursos']):
-            # Static analysis error fixing: renamed variable
             course_credits = curso['creditos']
             if course_credits > 20:
                 self._validation_error(f"Course {index}: {course_credits} "
@@ -1037,7 +1034,6 @@ class ImportService:
             try:
                 cursor.execute(query, values)
                 self._success(f"Imported alumno: {name} ({email})")
-            # Static analysis error fixing: more specific exception
             except (ValueError, KeyError) as err:
                 self._error(f"Inserting alumno {name} ({email}): {err}")
 
@@ -1063,7 +1059,6 @@ class ImportService:
             try:
                 cursor.execute(query, values)
                 self._success(f"Imported profesor: {name} ({email})")
-            # Static analysis error fixing: more specific exception
             except (ValueError, KeyError) as err:
                 self._error(f"Inserting profesor {name} ({email}): {err}")
 
@@ -1078,7 +1073,6 @@ class ImportService:
             curso_id = curso['id']
             codigo = curso['codigo']
             descripcion = curso['descripcion']
-            # Static analysis error fixing: renamed variable
             course_credits = curso['creditos']
 
             try:
@@ -1087,7 +1081,6 @@ class ImportService:
                     VALUES (%s, %s, %s, %s)
                 """, (curso_id, codigo, descripcion, course_credits))
                 self._success(f"Inserted course: {codigo} - {descripcion}")
-            # Static analysis error fixing: more specific exception
             except (ValueError, KeyError) as e:
                 self._error(f"Inserting course {codigo}: {e}")
 
@@ -1112,7 +1105,6 @@ class ImportService:
                     else:
                         self._error(f"Prerequisite course with code "
                                    f"{cod_requisito} not found")
-                # Static analysis error fixing: more specific exception
                 except (ValueError, KeyError) as e:
                     self._error(f"Adding prerequisite {cod_requisito} for "
                                f"course {curso_id}: {e}")
@@ -1139,13 +1131,11 @@ class ImportService:
                 """, (instancia_id, period, curso_id))
                 self._success(f"Inserted instance {instancia_id} for course "
                              f"{curso_id} in period {period}")
-            # Static analysis error fixing: more specific exception
             except (ValueError, KeyError) as e:
                 self._error(f"Inserting instance {instancia_id}: {e}")
 
         self.db.commit()
 
-    # ----- Query and Command Separation Methods ---
     def _get_professor_id_by_import_id(self, cursor, profesor_import_id):
         """Query: Get professor ID by import_id."""
         cursor.execute("""
@@ -1162,7 +1152,6 @@ class ImportService:
         current_count = cursor.fetchone()['COUNT(*)']
         return current_count + 1
 
-    # Static analysis error fixing: too many arguments - using kwargs
     def _insert_section(self, cursor, **section_data):
         """Command: Insert a new section into the database."""
         cursor.execute("""
@@ -1173,7 +1162,6 @@ class ImportService:
               section_data['number'], section_data['profesor_id'],
               section_data['weight_or_percentage']))
 
-    # Static analysis error fixing: too many arguments - using kwargs
     def _insert_topic(self, cursor, **topic_data):
         """Command: Insert a new topic into the database."""
         cursor.execute("""
@@ -1184,7 +1172,6 @@ class ImportService:
               topic_data['topic_name'], topic_data['topic_valor'],
               topic_data['topic_weight_or_percentage']))
 
-    # Static analysis error fixing: too many arguments - using kwargs
     def _insert_activity(self, cursor, **activity_data):
         """Command: Insert a new activity into the database."""
         cursor.execute("""
@@ -1212,7 +1199,6 @@ class ImportService:
                                       instance_number=instance_number)
                 self._success(f"Inserted Activity {i} for Topic ID "
                              f"{topic_id}")
-            # Static analysis error fixing: more specific exception
             except (ValueError, KeyError) as e:
                 self._error(f"Inserting Activity {i} for Topic ID "
                            f"{topic_id}: {e}")
@@ -1241,7 +1227,6 @@ class ImportService:
 
                 self._process_topic_activities(cursor, topic_id, topic_eval)
 
-            # Static analysis error fixing: more specific exception
             except (ValueError, KeyError) as e:
                 self._error(f"Inserting Topic ID {topic_id} in Section ID "
                            f"{seccion_id}: {e}")
@@ -1264,7 +1249,6 @@ class ImportService:
 
         try:
             number = self._get_next_section_number(cursor, instancia_id)
-        # Static analysis error fixing: more specific exception
         except (ValueError, KeyError) as e:
             self._error(f"Counting sections for instance_id "
                        f"{instancia_id}: {e}")
@@ -1284,7 +1268,6 @@ class ImportService:
             self._process_section_topics(cursor, seccion_id,
                                          combinacion_topicos, topicos_dict)
 
-        # Static analysis error fixing: more specific exception
         except (ValueError, KeyError) as e:
             self._error(f"Inserting Section ID {seccion_id}: {e}")
 
@@ -1346,7 +1329,6 @@ class ImportService:
                              f"section_id {seccion_id} (course_id "
                              f"{course_id})")
 
-            # Static analysis error fixing: more specific exception
             except (ValueError, KeyError) as e:
                 self._error(f"Failed to enroll alumno_import_id "
                            f"{alumno_import_id} in section_id {seccion_id}: "
@@ -1396,7 +1378,6 @@ class ImportService:
                 """, (activity_id, alumno_id, nota))
                 self._success(f"Inserted grade for alumno_id {alumno_id}, "
                              f"activity_id {activity_id}: {nota}")
-            # Static analysis error fixing: more specific exception
             except (ValueError, KeyError) as e:
                 self._error(f"Inserting grade for alumno_id {alumno_id}, "
                            f"topico_id {topico_id}, instancia {instancia}: "
@@ -1423,7 +1404,6 @@ class ImportService:
                 self._success(f"Room inserted: id={room_id}, "
                              f"name='{nombre}', capacidad={capacidad}")
 
-            # Static analysis error fixing: more specific exception
             except (ValueError, KeyError) as e:
                 self._error(f"Failed to insert room id={room_id}, "
                            f"name='{nombre}': {e}")

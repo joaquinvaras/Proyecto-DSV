@@ -59,7 +59,6 @@ class CourseService:
         )
         self.db.commit()
 
-    # Static analysis error fixing: renamed parameter credits to course_credits
     def create(self, name, nrc, course_credits, prerequisites=None):
         """Create a new course with optional prerequisites."""
         if prerequisites is None:
@@ -82,7 +81,6 @@ class CourseService:
         self.db.commit()
         return course_id
 
-    # Static analysis error fixing: too many arguments - using keyword args
     def update(self, course_id, **course_data):
         """Update an existing course with new data."""
         name = course_data.get('name')
@@ -160,7 +158,6 @@ class CourseService:
         cursor.execute("DELETE FROM Instances WHERE course_id = %s",
                        (course_id,))
 
-        # Static analysis error fixing: line length
         cursor.execute("DELETE FROM CoursePrerequisites WHERE "
                        "course_id = %s OR prerequisite_id = %s",
                        (course_id, course_id))

@@ -54,7 +54,6 @@ class ActivityService:
     def get_next_instance_number(self, topic_id):
         """Get the next available instance number for a topic."""
         cursor = self.db.connect()
-        # Static analysis error fixing: line length
         cursor.execute(
             "SELECT MAX(instance) as max_instance FROM Activities "
             "WHERE topic_id = %s",
@@ -68,7 +67,6 @@ class ActivityService:
     def create(self, topic_id, instance, weight, optional_flag):
         """Create a new activity."""
         cursor = self.db.connect()
-        # Static analysis error fixing: line length
         cursor.execute(
             "INSERT INTO Activities (topic_id, instance, weight, "
             "optional_flag) VALUES (%s, %s, %s, %s)",
@@ -79,7 +77,6 @@ class ActivityService:
     def update(self, activity_id, instance, weight, optional_flag):
         """Update an existing activity."""
         cursor = self.db.connect()
-        # Static analysis error fixing: line length
         cursor.execute(
             "UPDATE Activities SET instance = %s, weight = %s, "
             "optional_flag = %s WHERE id = %s",
