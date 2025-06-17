@@ -4,7 +4,6 @@ This module implements a comprehensive academic management system with CRUD oper
 for courses, professors, students, instances, sections, topics, activities, and grades.
 """
 
-# Static analysis error fixing: import order and unused import
 from flask import Flask, render_template, request, redirect, url_for, flash, Response
 from Service.course_service import CourseService
 from Service.user_service import UserService
@@ -60,7 +59,6 @@ def create_course():
     if request.method == 'POST':
         name = request.form['name']
         nrc = request.form['nrc']
-        # Static analysis error fixing: renamed parameter
         course_credits = int(request.form.get('credits', 0))
         prerequisites = request.form.getlist('prerequisites')
         course_service.create(name, nrc, course_credits, prerequisites)
@@ -69,7 +67,6 @@ def create_course():
     return render_template('courses/create.html', all_courses=all_courses)
 
 
-# ----- solution ONE LEVEL OF ABSTRACTION error ---
 def _get_edit_course_context(course_id):
     """Get context data for editing a course."""
     course = course_service.get_by_id(course_id)
@@ -87,15 +84,18 @@ def _process_course_update(course_id):
     """Process course update form data."""
     name = request.form['name']
     nrc = request.form['nrc']
-    # Static analysis error fixing: renamed parameter
     course_credits = int(request.form.get('credits', 0))
     prerequisites = request.form.getlist('prerequisites')
 
-    course_service.update(course_id, name, nrc, course_credits,
-                          prerequisites)
+    course_service.update(
+        course_id,
+        name=name,
+        nrc=nrc,
+        credits=course_credits,
+        prerequisites=prerequisites
+    )
 
 
-# Static analysis error fixing: renamed parameter id to course_id
 @app.route('/courses/edit/<int:course_id>', methods=['GET', 'POST'])
 def edit_course(course_id):
     """Edit an existing course."""
@@ -115,9 +115,6 @@ def edit_course(course_id):
                                                   current_prerequisites])
 
 
-# ----- solution ONE LEVEL OF ABSTRACTION error ---
-
-# Static analysis error fixing: renamed parameter id to course_id
 @app.route('/courses/delete/<int:course_id>', methods=['POST'])
 def delete_course(course_id):
     """Delete a course."""
@@ -202,7 +199,6 @@ def create_topic(instance_id, section_id):
                            instance=instance)
 
 
-# Static analysis error fixing: renamed parameter id to topic_id
 @app.route('/topics/edit/<int:topic_id>', methods=['GET', 'POST'])
 def edit_topic(topic_id):
     """Edit an existing topic."""
@@ -259,7 +255,6 @@ def edit_topic(topic_id):
     )
 
 
-# Static analysis error fixing: renamed parameter id to topic_id
 @app.post('/topics/delete/<int:topic_id>')
 def delete_topic_direct(topic_id):
     """Delete a topic directly."""
@@ -277,7 +272,6 @@ def delete_topic_direct(topic_id):
     return redirect(url_for('list_sections', instance_id=instance['id']))
 
 
-# ----- solution ONE LEVEL OF ABSTRACTION error ---
 def _get_delete_topic_context(topic_id):
     """Get context data for deleting a topic."""
     topic = topic_service.get_by_id(topic_id)
@@ -309,7 +303,6 @@ def _delete_topic_and_redirect(topic_id, topic_name, instance_id):
     return redirect(url_for('list_sections', instance_id=instance_id))
 
 
-# Static analysis error fixing: renamed parameter id to topic_id
 @app.route('/topics/delete/percentage/<int:topic_id>',
            methods=['GET', 'POST'])
 def delete_topic_percentage_view(topic_id):
@@ -339,11 +332,8 @@ def delete_topic_percentage_view(topic_id):
     )
 
 
-# ----- solution ONE LEVEL OF ABSTRACTION error ---
-
 # ---------------- INSTANCES ----------------
 
-# ----- solution ONE LEVEL OF ABSTRACTION error ---
 def _enrich_instances_with_sections(instances):
     """Add section data to instances."""
     for instance in instances:
@@ -367,9 +357,6 @@ def list_instances(course_id):
                            course=course)
 
 
-# ----- solution ONE LEVEL OF ABSTRACTION error ---
-
-# ----- solution ONE LEVEL OF ABSTRACTION error ---
 def _validate_course_exists(course_id):
     """Validate that a course exists."""
     course = course_service.get_by_id(course_id)
@@ -418,8 +405,6 @@ def create_instance(course_id):
 
     return _get_create_instance_context(course_id, course)
 
-
-# ----- solution ONE LEVEL OF ABSTRACTION error ---
 
 @app.route('/instances/<int:instance_id>/edit', methods=['GET', 'POST'])
 def edit_instance(instance_id):
@@ -474,7 +459,6 @@ def delete_instance(instance_id):
 
 
 # ---------------- SECTIONS ----------------
-# ----- solution ONE LEVEL OF ABSTRACTION error ---
 def _validate_instance_exists(instance_id):
     """Validate that an instance exists."""
     instance = instance_service.get_by_id(instance_id)
@@ -528,8 +512,6 @@ def list_sections(instance_id):
                            instance=instance,
                            students=students)
 
-
-# ----- solution ONE LEVEL OF ABSTRACTION error ---
 
 @app.route('/instances/<int:instance_id>/sections/create',
            methods=['GET', 'POST'])
@@ -623,7 +605,6 @@ def delete_section(section_id):
     return "Section not found", 404
 
 
-# ----- solution FUNCTION SIZE and ONE LEVEL OF ABSTRACTION error ---
 def _validate_student_and_section(section_id, user_id):
     """Validate that both student and section exist."""
     section = section_service.get_by_id(section_id)
@@ -782,8 +763,6 @@ def calculate_student_grade(section_id, user_id):
     )
 
 
-# ----- solution FUNCTION SIZE and ONE LEVEL OF ABSTRACTION error ---
-
 @app.route('/sections/<int:section_id>/students/<int:user_id>/recalculate')
 def recalculate_grade(section_id, user_id):
     """Recalculate a student's grade."""
@@ -808,7 +787,6 @@ def _calculate_all_students_final_grades(section_id):
             course_taken_service.update_final_grade(user_id, section_id,
                                                      final_grade)
             calculated_count += 1
-        # Static analysis error fixing: more specific exception
         except (ValueError, KeyError) as e:
             flash(f"Error calculating grade for student "
                   f"{enrollment['user_name']}: {str(e)}", "warning")
@@ -988,7 +966,6 @@ def create_activity(topic_id):
     )
 
 
-# Static analysis error fixing: renamed parameter id to activity_id
 @app.route('/activities/edit/<int:activity_id>', methods=['GET', 'POST'])
 def edit_activity(activity_id):
     """Edit an existing activity."""
@@ -1049,7 +1026,6 @@ def edit_activity(activity_id):
     )
 
 
-# Static analysis error fixing: renamed parameter id to activity_id
 @app.post('/activities/delete/<int:activity_id>')
 def delete_activity_direct(activity_id):
     """Delete an activity directly."""
@@ -1063,7 +1039,6 @@ def delete_activity_direct(activity_id):
     return redirect(url_for('list_activities', topic_id=topic['id']))
 
 
-# ----- solution ONE LEVEL OF ABSTRACTION error ---
 def _validate_activity_and_topic(activity_id):
     """Validate that both activity and topic exist."""
     activity = activity_service.get_by_id(activity_id)
@@ -1107,7 +1082,6 @@ def _delete_activity_and_redirect(activity_id, topic_id):
     return redirect(url_for('list_activities', topic_id=topic_id))
 
 
-# Static analysis error fixing: renamed parameter id to activity_id
 @app.route('/activities/delete/percentage/<int:activity_id>',
            methods=['GET', 'POST'])
 def delete_activity_percentage_view(activity_id):
@@ -1140,7 +1114,6 @@ def delete_activity_percentage_view(activity_id):
     )
 
 
-# ----- solution ONE LEVEL OF ABSTRACTION error ---
 
 # ---------------- PROFESSORS ----------------
 @app.route('/professors')
@@ -1173,7 +1146,6 @@ def create_professor():
                            next_import_id=next_import_id)
 
 
-# Static analysis error fixing: renamed parameter id to professor_id
 @app.route('/professors/edit/<int:professor_id>', methods=['GET', 'POST'])
 def edit_professor(professor_id):
     """Edit an existing professor."""
@@ -1199,7 +1171,6 @@ def edit_professor(professor_id):
     return render_template('professors/edit.html', professor=professor)
 
 
-# Static analysis error fixing: renamed parameter id to professor_id
 @app.route('/professors/delete/<int:professor_id>', methods=['POST'])
 def delete_professor(professor_id):
     """Delete a professor."""
@@ -1245,7 +1216,6 @@ def create_student():
                            next_import_id=next_import_id)
 
 
-# Static analysis error fixing: renamed parameter id to student_id
 @app.route('/students/edit/<int:student_id>', methods=['GET', 'POST'])
 def edit_student(student_id):
     """Edit an existing student."""
@@ -1275,7 +1245,6 @@ def edit_student(student_id):
     return render_template('students/edit.html', student=student)
 
 
-# Static analysis error fixing: renamed parameter id to student_id
 @app.route('/students/delete/<int:student_id>', methods=['POST'])
 def delete_student(student_id):
     """Delete a student."""
@@ -1290,7 +1259,6 @@ def delete_student(student_id):
 
 # ---------------- Grades ----------------
 
-# ----- solution ONE LEVEL OF ABSTRACTION error ---
 def _validate_activity_exists(activity_id):
     """Validate that an activity exists."""
     activity = activity_service.get_by_id(activity_id)
@@ -1361,8 +1329,6 @@ def evaluate_students(activity_id):
     )
 
 
-# ----- solution ONE LEVEL OF ABSTRACTION error ---
-
 @app.route('/activities/<int:activity_id>/save_grades', methods=['POST'])
 def save_grades(activity_id):
     """Save grades for an activity."""
@@ -1428,9 +1394,7 @@ def import_data():
 
         try:
             import_service.import_json(uploaded_file, selected_type)
-            # Static analysis error fixing: removed f-string without interpolation
             flash(f"Correctly imported {selected_type} data")
-        # Static analysis error fixing: more specific exception
         except (ValueError, KeyError) as e:
             flash(f"Error importing data: {str(e)}")
 
