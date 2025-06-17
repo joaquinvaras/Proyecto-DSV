@@ -19,8 +19,8 @@
                 <td>{{ professor.name }}</td>
                 <td>{{ professor.email }}</td>
                 <td>
-                    <a href="{{ url_for('edit_professor', id=professor.id) }}" class="btn btn-warning btn-sm">Edit</a>
-                    <form action="{{ url_for('delete_professor', id=professor.id) }}" method="post" style="display:inline;">
+                    <a href="{{ url_for('edit_professor', professor_id=professor.id) }}" class="btn btn-warning btn-sm">Edit</a>
+                    <form action="{{ url_for('delete_professor', professor_id=professor.id) }}" method="post" style="display:inline;">
                         <button type="submit" class="btn btn-danger btn-sm">Delete</button>
                     </form>
                 </td>
