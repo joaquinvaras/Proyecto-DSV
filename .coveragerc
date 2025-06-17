@@ -5,3 +5,4 @@ omit =
     settings.py
     http_errors.py
     db.py
+    Views
