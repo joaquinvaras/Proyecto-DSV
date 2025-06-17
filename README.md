@@ -160,6 +160,9 @@ Your code has been rated at 9.21/10
 
 ## ⚠️ Análisis de Errores Remanentes
 
+### Docstring
+Agregamos a todos los archivos un docstring al principio de cada metodo (todo entre 3 comillas) y de los archivos en general sino nos tiraba muchos herrores la herramiento, se comento con el profesor y dijo que podiamos dejarlos para que no tire tantos errores.
+
 ### 🔗 **Error de Importación (E0401)**
 La mayoría de los archivos de servicio presentan el error `Unable to import 'db'`. Este error es **inevitable** debido a que se trata de un import local del sistema que no está disponible en el entorno de análisis de Pylint. No representa un problema funcional del código.
 
