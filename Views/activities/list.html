@@ -67,7 +67,7 @@
                       {% if topic.weight_or_percentage %}
                         <a href="{{ url_for('delete_activity_percentage_view', activity_id=activity.id) }}" class="btn btn-danger">Delete</a>
                       {% else %}
-                        <form method="POST" action="{{ url_for('delete_activity_direct', id=activity.id) }}" class="d-inline">
+                        <form method="POST" action="{{ url_for('delete_activity_direct', activity_id=activity.id) }}" class="d-inline">
                           <button type="submit" class="btn btn-danger">Delete</button>
                         </form>
                       {% endif %}
