@@ -1,5 +1,6 @@
 import json
 import re
+from datetime import datetime
 from db import DatabaseConnection
 
 class ImportService:
@@ -78,10 +79,16 @@ class ImportService:
         return instance > 0
 
     def _is_valid_percentage_value(self, value):
-        """Validates percentage/weight value (0.0-100.0)"""
+        """Validates percentage value (0.0-100.0 for topic combination values)"""
         if not isinstance(value, (int, float)):
             return False
         return 0.0 <= float(value) <= 100.0
+
+    def _is_valid_activity_value(self, value):
+        """Validates activity weight/percentage value (any positive number)"""
+        if not isinstance(value, (int, float)):
+            return False
+        return float(value) > 0
 
     def _is_valid_evaluation_type(self, tipo):
         """Validates evaluation type"""
@@ -105,6 +112,320 @@ class ImportService:
             return False
             
         return True
+
+    # ----- Logic Validations ---
+
+    def _validate_unique_emails_across_types(self, data, file_type):
+        """Validates that emails are unique across all users being imported"""
+        if file_type in ['alumnos', 'profesores']:
+            emails = []
+            users_key = 'alumnos' if file_type == 'alumnos' else 'profesores'
+            
+            for user in data[users_key]:
+                email = user.get('correo', '').lower()
+                if email in emails:
+                    self._validation_error(f"Duplicate email found: {email}")
+                    return False
+                emails.append(email)
+        return True
+
+    def _validate_unique_import_ids(self, data, file_type):
+        """Validates that import_ids are unique within the file"""
+        if file_type in ['alumnos', 'profesores']:
+            import_ids = []
+            users_key = 'alumnos' if file_type == 'alumnos' else 'profesores'
+            
+            for user in data[users_key]:
+                import_id = user.get('id')
+                if import_id in import_ids:
+                    self._validation_error(f"Duplicate import_id found: {import_id}")
+                    return False
+                import_ids.append(import_id)
+        return True
+
+    def _validate_admission_dates_logic(self, data):
+        """Validates that admission dates are logical (not future, not too old)"""
+        current_year = datetime.now().year
+        
+        for index, alumno in enumerate(data['alumnos']):
+            year = alumno.get('anio_ingreso')
+            if year and (year > current_year or year < 1950):
+                self._validation_error(f"Alumno {index}: Admission year {year} is not logical")
+                return False
+        return True
+
+    def _validate_percentage_sum_per_topic(self, data):
+        """Validates that percentages sum to 100% for each topic (only for percentage-based topics)"""
+        for sec_index, seccion in enumerate(data['secciones']):
+            topicos_dict = seccion['evaluacion']['topicos']
+            
+            for topic_id, topic_eval in topicos_dict.items():
+                if topic_eval['tipo'] == 'porcentaje':
+                    valores = topic_eval['valores']
+                    total = sum(valores)
+                    
+                    if abs(total - 100.0) > 0.1:
+                        self._validation_error(
+                            f"Section {sec_index}, Topic {topic_id}: "
+                            f"Percentages sum to {total:.1f}%, must be 100%"
+                        )
+                        return False
+        return True
+
+    def _validate_topic_combination_percentages(self, data):
+        """Validates that topic combination percentages sum to 100% (only for percentage-based sections)"""
+        for sec_index, seccion in enumerate(data['secciones']):
+            if seccion['evaluacion']['tipo'] == 'porcentaje':
+                combinacion = seccion['evaluacion']['combinacion_topicos']
+                total_valor = sum(topic['valor'] for topic in combinacion)
+                
+                if abs(total_valor - 100.0) > 0.1:
+                    self._validation_error(
+                        f"Section {sec_index}: Topic combination sums to {total_valor:.1f}%, must be 100%"
+                    )
+                    return False
+        return True
+
+    def _validate_at_least_one_mandatory_activity(self, data):
+        """Validates that each topic has at least one mandatory activity"""
+        for sec_index, seccion in enumerate(data['secciones']):
+            topicos_dict = seccion['evaluacion']['topicos']
+            
+            for topic_id, topic_eval in topicos_dict.items():
+                obligatorias = topic_eval['obligatorias']
+                
+                if not any(obligatorias):
+                    self._validation_error(
+                        f"Section {sec_index}, Topic {topic_id}: "
+                        f"Must have at least one mandatory activity"
+                    )
+                    return False
+        return True
+
+    def _validate_weight_values_are_positive(self, data):
+        """Validates that all weight values are positive"""
+        for sec_index, seccion in enumerate(data['secciones']):
+            topicos_dict = seccion['evaluacion']['topicos']
+            
+            for topic_id, topic_eval in topicos_dict.items():
+                valores = topic_eval['valores']
+                
+                for i, valor in enumerate(valores):
+                    if valor <= 0:
+                        self._validation_error(
+                            f"Section {sec_index}, Topic {topic_id}, Activity {i}: "
+                            f"Weight/percentage value must be positive, got {valor}"
+                        )
+                        return False
+                    
+                    if topic_eval['tipo'] == 'porcentaje' and valor > 100.0:
+                        self._validation_error(
+                            f"Section {sec_index}, Topic {topic_id}, Activity {i}: "
+                            f"Percentage value cannot exceed 100%, got {valor}"
+                        )
+                        return False
+        return True
+
+    def _validate_course_prerequisites_exist(self, data):
+        """Validates that prerequisite courses exist in the same data"""
+        course_codes = {curso['codigo'] for curso in data['cursos']}
+        
+        for index, curso in enumerate(data['cursos']):
+            for prereq_code in curso['requisitos']:
+                if prereq_code not in course_codes:
+                    self._validation_error(
+                        f"Curso {index}: Prerequisite '{prereq_code}' not found in courses list"
+                    )
+                    return False
+        return True
+
+    def _validate_no_circular_prerequisites(self, data):
+        """Validates that there are no circular dependencies in prerequisites"""
+        def has_circular_dependency(course_code, prerequisites_map, visited, rec_stack):
+            visited.add(course_code)
+            rec_stack.add(course_code)
+            
+            for prereq in prerequisites_map.get(course_code, []):
+                if prereq not in visited:
+                    if has_circular_dependency(prereq, prerequisites_map, visited, rec_stack):
+                        return True
+                elif prereq in rec_stack:
+                    return True
+            
+            rec_stack.remove(course_code)
+            return False
+        
+        prereq_map = {}
+        for curso in data['cursos']:
+            prereq_map[curso['codigo']] = curso['requisitos']
+        
+        visited = set()
+        for course_code in prereq_map:
+            if course_code not in visited:
+                rec_stack = set()
+                if has_circular_dependency(course_code, prereq_map, visited, rec_stack):
+                    self._validation_error(f"Circular dependency detected involving course: {course_code}")
+                    return False
+        
+        return True
+
+    def _validate_self_prerequisites(self, data):
+        """Validates that courses don't have themselves as prerequisites"""
+        for index, curso in enumerate(data['cursos']):
+            course_code = curso['codigo']
+            if course_code in curso['requisitos']:
+                self._validation_error(f"Curso {index}: Course cannot be prerequisite of itself: {course_code}")
+                return False
+        return True
+
+    def _validate_grades_within_valid_range(self, data):
+        """Validates that all grades are within the valid range"""
+        for index, entry in enumerate(data['notas']):
+            nota = entry['nota']
+            if not (1.0 <= nota <= 7.0):
+                self._validation_error(f"Nota {index}: Grade {nota} is outside valid range (1.0-7.0)")
+                return False
+        return True
+
+    def _validate_no_duplicate_enrollments(self, data):
+        """Validates that students aren't enrolled multiple times in same section"""
+        enrollments = set()
+        
+        for index, entry in enumerate(data['alumnos_seccion']):
+            key = (entry['alumno_id'], entry['seccion_id'])
+            if key in enrollments:
+                self._validation_error(
+                    f"Enrollment {index}: Duplicate enrollment - "
+                    f"Student {entry['alumno_id']} already enrolled in section {entry['seccion_id']}"
+                )
+                return False
+            enrollments.add(key)
+        return True
+
+    def _validate_no_duplicate_grades(self, data):
+        """Validates that there are no duplicate grades for same student/activity"""
+        grades = set()
+        
+        for index, entry in enumerate(data['notas']):
+            key = (entry['alumno_id'], entry['topico_id'], entry['instancia'])
+            if key in grades:
+                self._validation_error(
+                    f"Grade {index}: Duplicate grade - "
+                    f"Student {entry['alumno_id']} already has grade for topic {entry['topico_id']} instance {entry['instancia']}"
+                )
+                return False
+            grades.add(key)
+        return True
+
+    def _validate_room_capacity_logic(self, data):
+        """Validates that room capacities are reasonable"""
+        for index, sala in enumerate(data['salas']):
+            capacity = sala['capacidad']
+            if capacity > 1000:
+                self._validation_error(f"Room {index}: Capacity {capacity} seems unreasonably high")
+                return False
+            if capacity < 5:
+                self._validation_error(f"Room {index}: Capacity {capacity} seems too low for a classroom")
+                return False
+        return True
+
+    def _validate_credits_range(self, data):
+        """Validates that course credits are in reasonable range"""
+        for index, curso in enumerate(data['cursos']):
+            credits = curso['creditos']
+            if credits > 20:
+                self._validation_error(f"Course {index}: {credits} credits seems unreasonably high")
+                return False
+        return True
+
+
+    # ----- Use of validations ---
+    def _validate_cursos_data_advanced(self, data):
+        """Enhanced validation for cursos with advanced logic"""
+        if not self._validate_cursos_data(data):
+            return False
+        
+        validations = [
+            self._validate_course_prerequisites_exist(data),
+            self._validate_no_circular_prerequisites(data),
+            self._validate_self_prerequisites(data),
+            self._validate_credits_range(data)
+        ]
+        
+        return all(validations)
+
+    def _validate_alumnos_data_advanced(self, data):
+        """Enhanced validation for alumnos with advanced logic"""
+        if not self._validate_alumnos_data(data):
+            return False
+        
+        validations = [
+            self._validate_unique_emails_across_types(data, 'alumnos'),
+            self._validate_unique_import_ids(data, 'alumnos'),
+            self._validate_admission_dates_logic(data)
+        ]
+        
+        return all(validations)
+
+    def _validate_profesores_data_advanced(self, data):
+        """Enhanced validation for profesores with advanced logic"""
+        if not self._validate_profesores_data(data):
+            return False
+        
+        validations = [
+            self._validate_unique_emails_across_types(data, 'profesores'),
+            self._validate_unique_import_ids(data, 'profesores')
+        ]
+        
+        return all(validations)
+
+    def _validate_secciones_data_advanced(self, data):
+        """Enhanced validation for secciones with advanced logic"""
+        if not self._validate_secciones_data(data):
+            return False
+        
+        validations = [
+            self._validate_percentage_sum_per_topic(data),
+            self._validate_topic_combination_percentages(data),
+            self._validate_at_least_one_mandatory_activity(data),
+            self._validate_weight_values_are_positive(data)
+        ]
+        
+        return all(validations)
+
+    def _validate_alumnos_seccion_data_advanced(self, data):
+        """Enhanced validation for alumnos_seccion with advanced logic"""
+        if not self._validate_alumnos_seccion_data(data):
+            return False
+        
+        validations = [
+            self._validate_no_duplicate_enrollments(data)
+        ]
+        
+        return all(validations)
+
+    def _validate_notas_alumnos_data_advanced(self, data):
+        """Enhanced validation for notas with advanced logic"""
+        if not self._validate_notas_alumnos_data(data):
+            return False
+        
+        validations = [
+            self._validate_no_duplicate_grades(data),
+            self._validate_grades_within_valid_range(data)
+        ]
+        
+        return all(validations)
+
+    def _validate_salas_data_advanced(self, data):
+        """Enhanced validation for salas with advanced logic"""
+        if not self._validate_salas_data(data):
+            return False
+        
+        validations = [
+            self._validate_room_capacity_logic(data)
+        ]
+        
+        return all(validations)
 
     def _validate_instancias_cursos_data(self, data):
         """Validates complete instancias_cursos data"""
@@ -390,13 +711,11 @@ class ImportService:
         """Validates individual alumno fields"""
         errors = []
         
-        # Required fields
         required_fields = ['id', 'nombre', 'correo', 'anio_ingreso']
         for field in required_fields:
             if field not in alumno:
                 errors.append(f"Missing required field '{field}'")
         
-        # Field validations
         if 'id' in alumno and not self._is_valid_id(alumno['id']):
             errors.append("'id' must be a positive integer")
             
@@ -436,13 +755,11 @@ class ImportService:
         """Validates individual profesor fields"""
         errors = []
         
-        # Required fields
         required_fields = ['id', 'nombre', 'correo']
         for field in required_fields:
             if field not in profesor:
                 errors.append(f"Missing required field '{field}'")
         
-        # Field validations
         if 'id' in profesor and not self._is_valid_id(profesor['id']):
             errors.append("'id' must be a positive integer")
             
@@ -479,13 +796,11 @@ class ImportService:
         """Validates individual curso fields"""
         errors = []
         
-        # Required fields
         required_fields = ['id', 'codigo', 'descripcion', 'creditos', 'requisitos']
         for field in required_fields:
             if field not in curso:
                 errors.append(f"Missing required field '{field}'")
         
-        # Field validations
         if 'id' in curso and not self._is_valid_id(curso['id']):
             errors.append("'id' must be a positive integer")
             
@@ -528,13 +843,11 @@ class ImportService:
         """Validates individual sala fields"""
         errors = []
         
-        # Required fields
         required_fields = ['id', 'nombre', 'capacidad']
         for field in required_fields:
             if field not in sala:
                 errors.append(f"Missing required field '{field}'")
         
-        # Field validations
         if 'id' in sala and not self._is_valid_id(sala['id']):
             errors.append("'id' must be a positive integer")
             
@@ -596,19 +909,19 @@ class ImportService:
                 
         return True
 
+    # ----- Imports ---
     def import_json(self, file, file_type):
         data = json.load(file)
 
-        # Validate data before importing
         validation_methods = {
-            'alumnos': self._validate_alumnos_data,
-            'profesores': self._validate_profesores_data,
-            'cursos': self._validate_cursos_data,
-            'salas_clases': self._validate_salas_data,
+            'alumnos': self._validate_alumnos_data_advanced,
+            'profesores': self._validate_profesores_data_advanced,
+            'cursos': self._validate_cursos_data_advanced,
+            'salas_clases': self._validate_salas_data_advanced,
             'instancias_cursos': self._validate_instancias_cursos_data,
-            'instancias_cursos_secciones': self._validate_secciones_data,
-            'alumnos_seccion': self._validate_alumnos_seccion_data,
-            'notas_alumnos': self._validate_notas_alumnos_data
+            'instancias_cursos_secciones': self._validate_secciones_data_advanced,
+            'alumnos_seccion': self._validate_alumnos_seccion_data_advanced,
+            'notas_alumnos': self._validate_notas_alumnos_data_advanced
         }
 
         if file_type in validation_methods:
@@ -799,7 +1112,7 @@ class ImportService:
             
             topic_eval = topicos_dict[str(topic_id)]
             topic_eval_tipo = topic_eval["tipo"]
-            topic_weight_or_percentage = topic_eval_tipo == "peso"
+            topic_weight_or_percentage = topic_eval_tipo == "porcentaje"
             
             try:
                 self._insert_topic(cursor, topic_id, seccion_id, topic_name, topic_valor, topic_weight_or_percentage)
@@ -819,21 +1132,18 @@ class ImportService:
         combinacion_topicos = seccion["evaluacion"]["combinacion_topicos"]
         topicos_dict = seccion["evaluacion"]["topicos"]
         
-        # Get professor ID
         profesor_id = self._get_professor_id_by_import_id(cursor, profesor_import_id)
         if not profesor_id:
             self._error(f"No professor found with import_id {profesor_import_id}")
             return
         
-        # Get next section number
         try:
             number = self._get_next_section_number(cursor, instancia_id)
         except Exception as e:
             self._error(f"Counting sections for instance_id {instancia_id}: {e}")
             return
         
-        # Insert section
-        weight_or_percentage = tipo_evaluacion == "peso"
+        weight_or_percentage = tipo_evaluacion == "porcentaje"
         
         try:
             self._insert_section(cursor, seccion_id, instancia_id, number, profesor_id, weight_or_percentage)
