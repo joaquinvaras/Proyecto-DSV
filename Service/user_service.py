@@ -51,7 +51,6 @@ class UserService:
 
         return result['max_import_id'] + 1
 
-    # Static analysis error fixing: too many arguments - using keyword args
     def create(self, name, email, is_professor, **user_data):
         """Create a new user with optional admission date and import ID."""
         admission_date = user_data.get('admission_date')
@@ -62,7 +61,6 @@ class UserService:
         if import_id is None:
             import_id = self.get_next_import_id(is_professor)
 
-        # Static analysis error fixing: line length
         cursor.execute(
             "INSERT INTO Users (name, email, admission_date, is_professor, "
             "import_id) VALUES (%s, %s, %s, %s, %s)",
@@ -71,7 +69,6 @@ class UserService:
         self.db.commit()
         return cursor.lastrowid
 
-    # Static analysis error fixing: too many arguments - using keyword args
     def update(self, user_id, name, email, is_professor, **user_data):
         """Update an existing user with optional admission date and import ID."""
         admission_date = user_data.get('admission_date')
@@ -80,7 +77,6 @@ class UserService:
         cursor = self.db.connect()
 
         if import_id is not None:
-            # Static analysis error fixing: line length
             cursor.execute(
                 "UPDATE Users SET name = %s, email = %s, "
                 "admission_date = %s, is_professor = %s, import_id = %s "
@@ -89,7 +85,6 @@ class UserService:
                  user_id)
             )
         else:
-            # Static analysis error fixing: line length
             cursor.execute(
                 "UPDATE Users SET name = %s, email = %s, "
                 "admission_date = %s, is_professor = %s WHERE id = %s",
@@ -107,7 +102,6 @@ class UserService:
                        (user_id,))
 
         if self.is_professor_with_sections(user_id):
-            # Static analysis error fixing: line length
             cursor.execute("UPDATE Sections SET professor_id = NULL "
                            "WHERE professor_id = %s", (user_id,))
 

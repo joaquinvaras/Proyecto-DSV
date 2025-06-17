@@ -4,7 +4,6 @@ This module provides functionality to generate course schedules with automatic
 room and time assignment, avoiding conflicts between professors and rooms.
 """
 
-# Static analysis error fixing: import order
 import csv
 import io
 from db import DatabaseConnection
@@ -18,7 +17,6 @@ class ScheduleService:
         self.db = DatabaseConnection()
         self.last_schedule = []
 
-    # ----- solution SEPARATION OF QUERY AND COMMAND error ---
     def _fetch_periods_from_database(self):
         """Command: Execute database operations to fetch periods."""
         cursor = self.db.connect()
@@ -31,7 +29,6 @@ class ScheduleService:
         rows = self._fetch_periods_from_database()
         periods = [row['period'] for row in rows]
         return periods
-    # ----- solution SEPARATION OF QUERY AND COMMAND error ---
 
     def get_rooms(self):
         """Get all available rooms for scheduling."""
@@ -56,7 +53,6 @@ class ScheduleService:
         """, (period,))
         return cursor.fetchall()
 
-    # ----- solution ONE LEVEL OF ABSTRACTION error ---
     def _initialize_schedule_data(self, period):
         """Initialize basic data needed for schedule generation."""
         sections = sorted(self.get_sections_by_period(period),
@@ -84,7 +80,6 @@ class ScheduleService:
             return False
         return True
 
-    # Static analysis error fixing: too many arguments - using kwargs
     def _is_time_slot_available(self, **slot_data):
         """Check if a time slot is available for both room and teacher."""
         room_id = slot_data['room_id']
@@ -101,7 +96,6 @@ class ScheduleService:
 
         return room_available and teacher_available
 
-    # Static analysis error fixing: too many arguments - using kwargs
     def _mark_time_slot_occupied(self, **slot_data):
         """Mark a time slot as occupied for both room and teacher."""
         room_id = slot_data['room_id']
@@ -131,7 +125,6 @@ class ScheduleService:
             'room_capacity': room['capacity']
         }
 
-    # Static analysis error fixing: too many arguments - using kwargs
     def _try_assign_section_to_slot(self, section, room, day, hours,
                                      **occupancy_data):
         """Attempt to assign a section to a specific room and day."""
@@ -139,7 +132,6 @@ class ScheduleService:
         teacher_occupancy = occupancy_data['teacher_occupancy']
         schedule = occupancy_data['schedule']
 
-        # Static analysis error fixing: renamed variable
         course_credits = section['credits']
         prof_id = section['professor_id']
 
@@ -177,7 +169,6 @@ class ScheduleService:
 
         return False
 
-    # Static analysis error fixing: too many arguments - using kwargs
     def _assign_section_to_schedule(self, section, days, rooms, hours,
                                      **occupancy_data):
         """Attempt to assign a section to the schedule."""
@@ -224,7 +215,6 @@ class ScheduleService:
         return schedule
     # ----- solution ONE LEVEL OF ABSTRACTION error ---
 
-    # Static analysis error fixing: unused argument marked
     def create_csv(self, period):
         """Create CSV content for the schedule.
         

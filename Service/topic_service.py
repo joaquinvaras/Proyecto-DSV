@@ -36,7 +36,6 @@ class TopicService:
     def create(self, name, section_id, weight, weight_or_percentage):
         """Create a new topic for a section."""
         cursor = self.db.connect()
-        # Static analysis error fixing: line length
         cursor.execute(
             "INSERT INTO Topics (name, section_id, weight, "
             "weight_or_percentage) VALUES (%s, %s, %s, %s)",

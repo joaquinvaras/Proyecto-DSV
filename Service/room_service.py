@@ -40,7 +40,6 @@ class RoomService:
             (name, capacity)
         )
         self.db.commit()
-        # Static analysis error fixing: corrected typo from lastrowid4
         return cursor.lastrowid
 
     def update(self, room_id, name, capacity):
@@ -76,7 +75,6 @@ class RoomService:
         )
         return cursor.fetchall()
 
-    # Static analysis error fixing: unused arguments marked with underscore
     def get_available_rooms(self, time_slot, day, period):
         """Get available rooms for a specific time slot, day, and period."""
         _ = time_slot, day, period
