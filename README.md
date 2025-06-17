@@ -192,3 +192,7 @@ El archivo principal obtuvo una calificación de **9.98/10**, lo cual consideram
 ## ✅ Conclusión
 
 El análisis estático ha demostrado que el código cumple con altos estándares de calidad, manteniendo puntuaciones superiores a 8.0/10 en todos los archivos analizados. Los errores remanentes son principalmente de naturaleza técnica (imports locales) o decisiones arquitectónicas justificadas.
+
+## Test
+
+Agregamos la carpeta test que tiene todos los test, el coverage lo consideramos solo de los services, y del main.py, no consideramos el frontend, por lo que cuando se ejecuta el pytest entrega el valor de coverage entre los archivos de service y de main,py que son los que utilizamos en el proyecto.
