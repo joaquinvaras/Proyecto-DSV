@@ -135,86 +135,121 @@ class ImportService:
 
         self.db.commit()
 
+# ----- solution FUNCTION SIZE and SEPARATION OF QUERY AND COMMAND error ---
+    def _get_professor_id_by_import_id(self, cursor, profesor_import_id):
+        """Query: Gets professor ID by import_id"""
+        cursor.execute("""
+            SELECT id FROM Users WHERE import_id = %s AND is_professor = TRUE
+        """, (profesor_import_id,))
+        result = cursor.fetchone()
+        return result["id"] if result else None
+    
+    def _get_next_section_number(self, cursor, instancia_id):
+        """Query: Gets the next available section number for an instance"""
+        cursor.execute("""
+            SELECT COUNT(*) FROM Sections WHERE instance_id = %s
+        """, (instancia_id,))
+        current_count = cursor.fetchone()['COUNT(*)']
+        return current_count + 1
+    
+    def _insert_section(self, cursor, seccion_id, instancia_id, number, profesor_id, weight_or_percentage):
+        """Command: Inserts a new section into the database"""
+        cursor.execute("""
+            INSERT INTO Sections (id, instance_id, number, professor_id, weight_or_percentage)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (seccion_id, instancia_id, number, profesor_id, weight_or_percentage))
+    
+    def _insert_topic(self, cursor, topic_id, seccion_id, topic_name, topic_valor, topic_weight_or_percentage):
+        """Command: Inserts a new topic into the database"""
+        cursor.execute("""
+            INSERT INTO Topics (id, section_id, name, weight, weight_or_percentage)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (topic_id, seccion_id, topic_name, topic_valor, topic_weight_or_percentage))
+    
+    def _insert_activity(self, cursor, topic_id, activity_weight, optional_flag, instance_number):
+        """Command: Inserts a new activity into the database"""
+        cursor.execute("""
+            INSERT INTO Activities (topic_id, weight, optional_flag, instance)
+            VALUES (%s, %s, %s, %s)
+        """, (topic_id, activity_weight, optional_flag, instance_number))
+    
+    def _process_topic_activities(self, cursor, topic_id, topic_eval):
+        """Processes and inserts all activities for a topic"""
+        valores = topic_eval["valores"]
+        obligatorias = topic_eval["obligatorias"]
+        
+        for i, (valor, obligatorio) in enumerate(zip(valores, obligatorias)):
+            activity_weight = valor * 10
+            optional_flag = not obligatorio
+            instance_number = i + 1
+            
+            try:
+                self._insert_activity(cursor, topic_id, activity_weight, optional_flag, instance_number)
+                self._success(f"Inserted Activity {i} for Topic ID {topic_id}")
+            except Exception as e:
+                self._error(f"Inserting Activity {i} for Topic ID {topic_id}: {e}")
+    
+    def _process_section_topics(self, cursor, seccion_id, combinacion_topicos, topicos_dict):
+        """Processes and inserts all topics for a section"""
+        for topic in combinacion_topicos:
+            topic_id = topic["id"]
+            topic_name = topic["nombre"]
+            topic_valor = topic["valor"] * 10
+            
+            topic_eval = topicos_dict[str(topic_id)]
+            topic_eval_tipo = topic_eval["tipo"]
+            topic_weight_or_percentage = topic_eval_tipo == "peso"
+            
+            try:
+                self._insert_topic(cursor, topic_id, seccion_id, topic_name, topic_valor, topic_weight_or_percentage)
+                self._success(f"Inserted Topic ID {topic_id} for Section ID {seccion_id}")
+                
+                self._process_topic_activities(cursor, topic_id, topic_eval)
+                
+            except Exception as e:
+                self._error(f"Inserting Topic ID {topic_id} in Section ID {seccion_id}: {e}")
+    
+    def _process_single_section(self, cursor, seccion):
+        """Processes and inserts a single section with its topics and activities"""
+        seccion_id = seccion["id"]
+        instancia_id = seccion["instancia_curso"]
+        profesor_import_id = seccion["profesor_id"]
+        tipo_evaluacion = seccion["evaluacion"]["tipo"]
+        combinacion_topicos = seccion["evaluacion"]["combinacion_topicos"]
+        topicos_dict = seccion["evaluacion"]["topicos"]
+        
+        profesor_id = self._get_professor_id_by_import_id(cursor, profesor_import_id)
+        if not profesor_id:
+            self._error(f"No professor found with import_id {profesor_import_id}")
+            return
+        
+        try:
+            number = self._get_next_section_number(cursor, instancia_id)
+        except Exception as e:
+            self._error(f"Counting sections for instance_id {instancia_id}: {e}")
+            return
+        
+        weight_or_percentage = tipo_evaluacion == "peso"
+        
+        try:
+            self._insert_section(cursor, seccion_id, instancia_id, number, profesor_id, weight_or_percentage)
+            self._success(f"Inserted Section ID {seccion_id}")
+            
+            self._process_section_topics(cursor, seccion_id, combinacion_topicos, topicos_dict)
+            
+        except Exception as e:
+            self._error(f"Inserting Section ID {seccion_id}: {e}")
+
     def _import_instancias_cursos_secciones(self, data):
+        """Imports course instance sections with their topics and activities"""
         cursor = self.db.connect()
         secciones = data["secciones"]
 
         for seccion in secciones:
-            seccion_id = seccion["id"]
-            instancia_id = seccion["instancia_curso"]
-            profesor_import_id = seccion["profesor_id"]
-            tipo_evaluacion = seccion["evaluacion"]["tipo"]
-            combinacion_topicos = seccion["evaluacion"]["combinacion_topicos"]
-            topicos_dict = seccion["evaluacion"]["topicos"]
-
-            try:
-                cursor.execute("""
-                    SELECT id FROM Users WHERE import_id = %s AND is_professor = TRUE
-                """, (profesor_import_id,))
-                result = cursor.fetchone()
-                if not result:
-                    self._error(f"No professor found with import_id {profesor_import_id}")
-                    continue
-                profesor_id = result["id"]
-            except Exception as e:
-                self._error(f"Fetching professor ID for import_id {profesor_import_id}: {e}")
-                continue
-
-            try:
-                cursor.execute("""
-                    SELECT COUNT(*) FROM Sections WHERE instance_id = %s
-                """, (instancia_id,))
-                current_count = cursor.fetchone()['COUNT(*)']
-                number = current_count + 1
-            except Exception as e:
-                self._error(f"Counting sections for instance_id {instancia_id}: {e}")
-                continue
-
-            weight_or_percentage = tipo_evaluacion == "peso"
-
-            try:
-                cursor.execute("""
-                    INSERT INTO Sections (id, instance_id, number, professor_id, weight_or_percentage)
-                    VALUES (%s, %s, %s, %s, %s)
-                """, (seccion_id, instancia_id, number, profesor_id, weight_or_percentage))
-                self._success(f"Inserted Section ID {seccion_id}")
-            except Exception as e:
-                self._error(f"Inserting Section ID {seccion_id}: {e}")
-                continue
-
-            for topic in combinacion_topicos:
-                topic_id = topic["id"]
-                topic_name = topic["nombre"]
-                topic_valor = topic["valor"] * 10
-
-                topic_eval = topicos_dict[str(topic_id)]
-                topic_eval_tipo = topic_eval["tipo"]
-                topic_weight_or_percentage = topic_eval_tipo == "peso"
-
-                try:
-                    cursor.execute("""
-                        INSERT INTO Topics (id, section_id, name, weight, weight_or_percentage)
-                        VALUES (%s, %s, %s, %s, %s)
-                    """, (topic_id, seccion_id, topic_name, topic_valor, topic_weight_or_percentage))
-                    self._success(f"Inserted Topic ID {topic_id} for Section ID {seccion_id}")
-                except Exception as e:
-                    self._error(f"Inserting Topic ID {topic_id} in Section ID {seccion_id}: {e}")
-                    continue
-
-                for i, (valor, obligatorio) in enumerate(zip(topic_eval["valores"], topic_eval["obligatorias"])):
-                    activity_weight = valor * 10
-                    optional_flag = not obligatorio
-
-                    try:
-                        cursor.execute("""
-                            INSERT INTO Activities (topic_id, weight, optional_flag, instance)
-                            VALUES (%s, %s, %s, %s)
-                        """, (topic_id, activity_weight, optional_flag, i+1))
-                        self._success(f"Inserted Activity {i} for Topic ID {topic_id}")
-                    except Exception as e:
-                        self._error(f"Inserting Activity {i} for Topic ID {topic_id}: {e}")
+            self._process_single_section(cursor, seccion)
 
         self.db.commit()
+    # ----- solution FUNCTION SIZE and SEPARATION OF QUERY AND COMMAND error ---
 
     def _import_alumnos_seccion(self, data):
         cursor = self.db.connect()
