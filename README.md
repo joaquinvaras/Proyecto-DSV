@@ -98,7 +98,15 @@ Your code has been rated at 9.44/10
 ```
 
 ### 📥 **import_service.py:**
-*(Análisis pendiente o sin errores significativos)*
+```
+************* Module import_service
+import_service.py:312:0: C0325: Unnecessary parens after 'not' keyword (superfluous-parens)
+import_service.py:1:0: C0302: Too many lines in module (1431/1000) (too-many-lines)
+import_service.py:11:0: E0401: Unable to import 'db' (import-error)
+import_service.py:14:0: R0903: Too few public methods (1/2) (too-few-public-methods)
+------------------------------------------------------------------
+Your code has been rated at 9.90/10
+```
 
 ### 🏢 **instance_service.py:**
 ```
@@ -117,7 +125,12 @@ Your code has been rated at 8.81/10
 ```
 
 ### 📅 **schedule_service.py:**
-*(Análisis pendiente o sin errores significativos)*
+```
+************* Module schedule_service
+schedule_service.py:10:0: E0401: Unable to import 'db' (import-error)
+------------------------------------------------------------------
+Your code has been rated at 9.55/10 
+```
 
 ### 📖 **section_service.py:**
 ```
@@ -149,6 +162,16 @@ Your code has been rated at 9.21/10
 
 ### 🔗 **Error de Importación (E0401)**
 La mayoría de los archivos de servicio presentan el error `Unable to import 'db'`. Este error es **inevitable** debido a que se trata de un import local del sistema que no está disponible en el entorno de análisis de Pylint. No representa un problema funcional del código.
+
+### 📄 **Errores en import_service.py**
+
+Este archivo presenta un par de errores, 
+
+1. **Código extenso (C0302)**: El módulo excede las 1000 líneas recomendadas. Esto se debe a que la logica de importacion tiene muchas validaciones sobre la carga de archivos en la base de datos, lo que causa que quede algo largo el archivo.
+
+2. **Parentesis innecesario (C0325)**: Esto parece ser un error en el pylint, ya que si quitamos ese parentesis el not no se toma de la manera correcta.
+
+2. **Pocos metodos publicos (R0903)**: usamos los metodos necesarios asi que por motivos de usabilidad del codigo decidimos ignora el error.
 
 ### 📄 **Errores en main.py**
 
