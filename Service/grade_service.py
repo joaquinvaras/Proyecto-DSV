@@ -136,7 +136,7 @@ class GradeService:
                 return 0, 0
             activity_grade = 1.0
         else:
-            activity_grade = grade_result['grade']
+            activity_grade = float(grade_result['grade'])
 
         if is_percentage:
             contribution = activity_grade * (activity_weight / 100)
