@@ -61,8 +61,27 @@ def create_course():
         nrc = request.form['nrc']
         course_credits = int(request.form.get('credits', 0))
         prerequisites = request.form.getlist('prerequisites')
-        course_service.create(name, nrc, course_credits, prerequisites)
-        return redirect(url_for('list_courses'))
+        
+        try:
+            course_service.create(name, nrc, course_credits, prerequisites)
+            flash(f"Course '{name}' created successfully.", "success")
+            return redirect(url_for('list_courses'))
+        except Exception as e:
+            if "Duplicate entry" in str(e) and "nrc" in str(e).lower():
+                flash(f"Error: NRC code '{nrc}' already exists. Please use a different NRC.", "danger")
+            else:
+                flash("An error occurred while creating the course. Please try again.", "danger")
+            
+            all_courses = course_service.get_all()
+            return render_template('courses/create.html', 
+                                 all_courses=all_courses,
+                                 form_data={
+                                     'name': name,
+                                     'nrc': nrc,
+                                     'credits': course_credits,
+                                     'prerequisites': prerequisites
+                                 })
+    
     all_courses = course_service.get_all()
     return render_template('courses/create.html', all_courses=all_courses)
 
@@ -103,11 +122,33 @@ def edit_course(course_id):
         course_id)
     if not course:
         return "Course not found", 404
-
+        
     if request.method == 'POST':
-        _process_course_update(course_id)
-        return redirect(url_for('list_courses'))
-
+        try:
+            _process_course_update(course_id)
+            flash(f"Course '{request.form['name']}' updated successfully.", "success")
+            return redirect(url_for('list_courses'))
+        except Exception as e:
+            if "Duplicate entry" in str(e) and "nrc" in str(e).lower():
+                flash(f"Error: NRC code '{request.form['nrc']}' already exists. Please use a different NRC.", "danger")
+            else:
+                flash("An error occurred while updating the course. Please try again.", "danger")
+            
+            course, all_courses, current_prerequisites = _get_edit_course_context(course_id)
+            
+            course.update({
+                'name': request.form.get('name', course['name']),
+                'nrc': request.form.get('nrc', course['nrc']),
+                'credits': int(request.form.get('credits', course.get('credits', 0)))
+            })
+            
+            selected_prerequisites = request.form.getlist('prerequisites')
+            
+            return render_template('courses/edit.html',
+                                 course=course,
+                                 all_courses=all_courses,
+                                 current_prerequisites=selected_prerequisites)
+    
     return render_template('courses/edit.html',
                            course=course,
                            all_courses=all_courses,
@@ -1204,14 +1245,29 @@ def create_student():
         else:
             import_id = None
 
-        user_service.create(name, email, is_professor=False,
-                            admission_date=admission_date,
-                            import_id=import_id)
-        flash(f"Student {name} created successfully.")
-        return redirect(url_for('list_students'))
+        try:
+            user_service.create(name, email, is_professor=False,
+                                admission_date=admission_date,
+                                import_id=import_id)
+            flash(f"Student {name} created successfully.", "success")
+            return redirect(url_for('list_students'))
+        except Exception as e:
+            if "Duplicate entry" in str(e) and "email" in str(e).lower():
+                flash(f"Error: Email '{email}' already exists. Please use a different email.", "danger")
+            else:
+                flash("An error occurred while creating the student. Please try again.", "danger")
+            
+            next_import_id = user_service.get_next_import_id(is_professor=False)
+            return render_template('students/create.html',
+                                 next_import_id=next_import_id,
+                                 form_data={
+                                     'name': name,
+                                     'email': email,
+                                     'admission_date': admission_date,
+                                     'import_id': request.form.get('import_id', '')
+                                 })
 
     next_import_id = user_service.get_next_import_id(is_professor=False)
-
     return render_template('students/create.html',
                            next_import_id=next_import_id)
 
@@ -1228,19 +1284,34 @@ def edit_student(student_id):
         email = request.form['email']
         admission_date = request.form['admission_date']
 
-        if 'import_id' in request.form and request.form['import_id']:
-            import_id = int(request.form['import_id'])
-            user_service.update(student_id, name, email,
-                                is_professor=False,
-                                admission_date=admission_date,
-                                import_id=import_id)
-        else:
-            user_service.update(student_id, name, email,
-                                is_professor=False,
-                                admission_date=admission_date)
+        try:
+            if 'import_id' in request.form and request.form['import_id']:
+                import_id = int(request.form['import_id'])
+                user_service.update(student_id, name, email,
+                                    is_professor=False,
+                                    admission_date=admission_date,
+                                    import_id=import_id)
+            else:
+                user_service.update(student_id, name, email,
+                                    is_professor=False,
+                                    admission_date=admission_date)
 
-        flash(f"Student {name} updated successfully.")
-        return redirect(url_for('list_students'))
+            flash(f"Student {name} updated successfully.", "success")
+            return redirect(url_for('list_students'))
+        except Exception as e:
+            if "Duplicate entry" in str(e) and "email" in str(e).lower():
+                flash(f"Error: Email '{email}' already exists. Please use a different email.", "danger")
+            else:
+                flash("An error occurred while updating the student. Please try again.", "danger")
+            
+            student.update({
+                'name': name,
+                'email': email,
+                'admission_date': admission_date,
+                'import_id': request.form.get('import_id', student.get('import_id', ''))
+            })
+            
+            return render_template('students/edit.html', student=student)
 
     return render_template('students/edit.html', student=student)
 
