@@ -1176,13 +1176,27 @@ def create_professor():
         else:
             import_id = None
 
-        user_service.create(name, email, is_professor=True,
-                            import_id=import_id)
-        flash(f"Professor {name} created successfully.")
-        return redirect(url_for('list_professors'))
+        try:
+            user_service.create(name, email, is_professor=True,
+                                import_id=import_id)
+            flash(f"Professor {name} created successfully.", "success")
+            return redirect(url_for('list_professors'))
+        except Exception as e:
+            if "Duplicate entry" in str(e) and "email" in str(e).lower():
+                flash(f"Error: Email '{email}' already exists. Please use a different email.", "danger")
+            else:
+                flash("An error occurred while creating the professor. Please try again.", "danger")
+
+            next_import_id = user_service.get_next_import_id(is_professor=True)
+            return render_template('professors/create.html',
+                                 next_import_id=next_import_id,
+                                 form_data={
+                                     'name': name,
+                                     'email': email,
+                                     'import_id': request.form.get('import_id', '')
+                                 })
 
     next_import_id = user_service.get_next_import_id(is_professor=True)
-
     return render_template('professors/create.html',
                            next_import_id=next_import_id)
 
@@ -1198,16 +1212,30 @@ def edit_professor(professor_id):
         name = request.form['name']
         email = request.form['email']
 
-        if 'import_id' in request.form and request.form['import_id']:
-            import_id = int(request.form['import_id'])
-            user_service.update(professor_id, name, email,
-                                is_professor=True, import_id=import_id)
-        else:
-            user_service.update(professor_id, name, email,
-                                is_professor=True)
+        try:
+            if 'import_id' in request.form and request.form['import_id']:
+                import_id = int(request.form['import_id'])
+                user_service.update(professor_id, name, email,
+                                    is_professor=True, import_id=import_id)
+            else:
+                user_service.update(professor_id, name, email,
+                                    is_professor=True)
 
-        flash(f"Professor {name} updated successfully.")
-        return redirect(url_for('list_professors'))
+            flash(f"Professor {name} updated successfully.", "success")
+            return redirect(url_for('list_professors'))
+        except Exception as e:
+            if "Duplicate entry" in str(e) and "email" in str(e).lower():
+                flash(f"Error: Email '{email}' already exists. Please use a different email.", "danger")
+            else:
+                flash("An error occurred while updating the professor. Please try again.", "danger")
+
+            professor.update({
+                'name': name,
+                'email': email,
+                'import_id': request.form.get('import_id', professor.get('import_id', ''))
+            })
+            
+            return render_template('professors/edit.html', professor=professor)
 
     return render_template('professors/edit.html', professor=professor)
 
