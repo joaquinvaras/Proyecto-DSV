@@ -195,4 +195,6 @@ El análisis estático ha demostrado que el código cumple con altos estándares
 
 ## Test
 
-Agregamos la carpeta test que tiene todos los test, el coverage lo consideramos solo de los services, y del main.py, no consideramos el frontend, por lo que cuando se ejecuta el pytest entrega el valor de coverage entre los archivos de service y de main,py que son los que utilizamos en el proyecto.
+Agregamos la carpeta test que tiene todos los test, el coverage lo consideramos solo de los services, y del main.py, no consideramos el frontend, por lo que cuando se ejecuta el pytest entrega el valor de coverage entre los archivos de service y de main.py que son los que utilizamos en el proyecto.
+
+Los test se ejecutan con el comando `pytest` o `python -m pytest`
